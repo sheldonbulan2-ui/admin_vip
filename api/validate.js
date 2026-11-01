@@ -1,42 +1,35 @@
 const querystring = require('querystring');
 const { loadKeys, saveKeys } = require('../lib/db');
 
-// Helper to reliably parse body in Vercel Serverless environment
-async function parseRequestBody(req) {
-  // If already parsed as object
-  if (req.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body)) {
-    return req.body;
-  }
+async function parseBody(req) {
+  let raw = '';
 
-  // If body is already loaded as string or Buffer
   if (req.body) {
-    const raw = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : String(req.body);
-    try {
-      return JSON.parse(raw);
-    } catch (e) {
-      return querystring.parse(raw);
+    if (typeof req.body === 'object' && !Buffer.isBuffer(req.body) && Object.keys(req.body).length > 0) {
+      return req.body;
     }
+    raw = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : String(req.body);
   }
 
-  // If body stream needs reading
-  return new Promise((resolve) => {
-    let data = '';
-    req.on('data', chunk => {
-      data += chunk;
+  if (!raw) {
+    raw = await new Promise((resolve) => {
+      let buf = '';
+      req.on('data', chunk => { buf += chunk; });
+      req.on('end', () => resolve(buf));
+      req.on('error', () => resolve(''));
     });
-    req.on('end', () => {
-      if (!data) return resolve({});
-      try {
-        resolve(JSON.parse(data));
-      } catch (e) {
-        resolve(querystring.parse(data));
-      }
-    });
-    req.on('error', () => resolve({}));
-  });
+  }
+
+  if (!raw) return {};
+
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    return querystring.parse(raw);
+  }
 }
 
-module.exports = async (req, res) => {
+const handler = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-HWID');
@@ -45,7 +38,7 @@ module.exports = async (req, res) => {
     return res.status(200).end();
   }
 
-  const b = await parseRequestBody(req);
+  const b = await parseBody(req);
   const q = req.query || {};
 
   // Support Volley form params, standard JSON, and query fallback
@@ -64,8 +57,6 @@ module.exports = async (req, res) => {
       message: message,
       ...extra
     };
-
-    // Return JSON Array for Android APK Volley parser
     return res.status(200).json([ payload ]);
   }
 
@@ -87,7 +78,9 @@ module.exports = async (req, res) => {
       return sendResponse(false, 'failed', '❌ Invalid License Key / Username! Not registered.');
     }
   } else {
-    return sendResponse(false, 'failed', '❌ Username and Password are required!');
+    return sendResponse(false, 'failed', '❌ Username and Password are required!', {
+      debugReceived: b
+    });
   }
 
   const now = Date.now();
@@ -115,7 +108,6 @@ module.exports = async (req, res) => {
   if (!acc.hwid && hwidParam && hwidParam !== 'UNKNOWN_HWID') {
     acc.hwid = hwidParam;
   } else if (acc.hwid && hwidParam && hwidParam !== 'UNKNOWN_HWID' && acc.hwid !== hwidParam) {
-    // If device locked to different HWID
     return sendResponse(false, 'failed', '🔒 Device Locked! This account is registered on another device. Contact Admin to reset HWID.');
   }
 
@@ -125,7 +117,6 @@ module.exports = async (req, res) => {
   const remainingSeconds = Math.max(0, Math.floor((acc.expiresAt - now) / 1000));
   const remainingHours = Math.floor(remainingSeconds / 3600);
 
-  // Return status: "enable" so OOOO000.smali passes check: equals("enable") -> TRUE!
   return sendResponse(true, 'enable', `✅ AUTHENTICATED! VIP Active (${remainingHours}h remaining)`, {
     username: acc.username,
     durationDays: acc.durationDays || 30,
@@ -136,3 +127,11 @@ module.exports = async (req, res) => {
     hwidBound: acc.hwid
   });
 };
+
+handler.config = {
+  api: {
+    bodyParser: false
+  }
+};
+
+module.exports = handler;
