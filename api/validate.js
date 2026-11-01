@@ -9,105 +9,127 @@ module.exports = (req, res) => {
     return res.status(200).end();
   }
 
-  // Support both POST (standard APK) and GET (quick test)
-  const keyParam = (req.method === 'POST' ? req.body?.key : req.query?.key) || '';
+  // Extract credentials from POST body or GET query
+  const usernameParam = (req.method === 'POST' ? req.body?.username : req.query?.username) || '';
+  const passwordParam = (req.method === 'POST' ? req.body?.password : req.query?.password) || '';
   const hwidParam = (req.method === 'POST' ? (req.body?.hwid || req.headers['x-hwid']) : req.query?.hwid) || 'UNKNOWN_HWID';
 
-  if (!keyParam || typeof keyParam !== 'string') {
+  // Support legacy 'key' fallback if somebody still uses it
+  const keyParam = (req.method === 'POST' ? req.body?.key : req.query?.key) || '';
+
+  const accounts = loadKeys();
+  let acc = null;
+
+  if (usernameParam && passwordParam) {
+    const cleanUser = usernameParam.trim().toLowerCase();
+    const cleanPass = passwordParam.trim();
+    acc = accounts.find(a => a.username && a.username.toLowerCase() === cleanUser);
+
+    if (!acc) {
+      return res.status(200).json({
+        valid: false,
+        status: 'failed',
+        message: '❌ Invalid Username! Hindi rehistrado ang account na ito sa Admin.'
+      });
+    }
+
+    if (acc.password !== cleanPass) {
+      return res.status(200).json({
+        valid: false,
+        status: 'failed',
+        message: '❌ Maling Password! Hindi tumutugma ang password na inilagay.'
+      });
+    }
+  } else if (keyParam) {
+    const cleanKey = keyParam.trim().toUpperCase();
+    acc = accounts.find(a => (a.key && a.key.toUpperCase() === cleanKey) || (a.username && a.username.toUpperCase() === cleanKey));
+    if (!acc) {
+      return res.status(200).json({
+        valid: false,
+        status: 'failed',
+        message: '❌ Invalid License Key / Username! Not registered in Admin.'
+      });
+    }
+  } else {
     return res.status(400).json({
       valid: false,
       status: 'failed',
-      message: '❌ License key is required'
-    });
-  }
-
-  const cleanKey = keyParam.trim().toUpperCase();
-  const keys = loadKeys();
-  const keyItem = keys.find(k => k.key.toUpperCase() === cleanKey);
-
-  // 1. REJECT RANDOM / UNREGISTERED KEYS IMMEDIATELY
-  if (!keyItem) {
-    return res.status(200).json({
-      valid: false,
-      status: 'failed',
-      message: '❌ Invalid License Key! Key was not issued by Admin.'
+      message: '❌ Username and Password are required!'
     });
   }
 
   const now = Date.now();
 
-  // 2. CHECK REVOKED STATUS
-  if (keyItem.status === 'revoked') {
+  // 1. CHECK REVOKED STATUS
+  if (acc.status === 'revoked') {
     return res.status(200).json({
       valid: false,
       status: 'failed',
-      message: '🚫 This license key has been revoked or banned by Admin.'
+      message: '🚫 This VIP account has been revoked or banned by Admin.'
     });
   }
 
-  // 3. CHECK ALREADY EXPIRED
-  if (keyItem.status === 'expired' || (keyItem.expiresAt && now >= keyItem.expiresAt)) {
-    keyItem.status = 'expired';
-    saveKeys(keys);
+  // 2. CHECK ALREADY EXPIRED
+  if (acc.status === 'expired' || (acc.expiresAt && now >= acc.expiresAt)) {
+    acc.status = 'expired';
+    saveKeys(accounts);
     return res.status(200).json({
       valid: false,
       status: 'failed',
       expired: true,
-      message: '⚠️ License Expired! Di na makakapasok, need na ulit ng new key mula sa Admin.',
-      expiresAt: keyItem.expiresAt
+      message: '⚠️ VIP Account Expired! Di na makakapasok, need na ulit mag-renew sa Admin.',
+      expiresAt: acc.expiresAt
     });
   }
 
-  // 4. FIRST ACTIVATION (Bind HWID and compute exact expiration from admin duration)
-  if (!keyItem.activatedAt) {
-    keyItem.activatedAt = now;
-    const durationMs = (keyItem.durationHours || 24) * 3600 * 1000;
-    keyItem.expiresAt = now + durationMs;
-    keyItem.hwid = hwidParam;
-    keyItem.status = 'active';
-    saveKeys(keys);
+  // 3. FIRST ACTIVATION (Bind HWID and compute exact expiration from duration)
+  if (!acc.activatedAt) {
+    acc.activatedAt = now;
+    const durationMs = (acc.durationHours || (acc.durationDays ? acc.durationDays * 24 : 24)) * 3600 * 1000;
+    acc.expiresAt = now + durationMs;
+    acc.hwid = hwidParam;
+    acc.status = 'active';
+    saveKeys(accounts);
   } else {
-    // 5. HWID DEVICE LOCK CHECK (Single device security)
-    if (keyItem.hwid && hwidParam !== 'UNKNOWN_HWID' && keyItem.hwid !== hwidParam) {
+    // 4. HWID DEVICE LOCK CHECK (Single phone security)
+    if (acc.hwid && hwidParam !== 'UNKNOWN_HWID' && acc.hwid !== hwidParam) {
       return res.status(200).json({
         valid: false,
         status: 'failed',
-        message: '🔒 Device Mismatch! Naka-bind na ang key na ito sa ibang cellphone. Humingi ng HWID reset sa Admin.'
+        message: '🔒 Device Mismatch! Naka-bind ang account na ito sa ibang cellphone. Humingi ng HWID reset sa Admin.'
       });
     }
 
-    // Bind HWID if it was previously reset
-    if (!keyItem.hwid && hwidParam !== 'UNKNOWN_HWID') {
-      keyItem.hwid = hwidParam;
-      saveKeys(keys);
+    if (!acc.hwid && hwidParam !== 'UNKNOWN_HWID') {
+      acc.hwid = hwidParam;
+      saveKeys(accounts);
     }
   }
 
-  // 6. CALCULATE REMAINING TIME
-  const remainingSeconds = Math.max(0, Math.floor((keyItem.expiresAt - now) / 1000));
+  // 5. CALCULATE REMAINING TIME
+  const remainingSeconds = Math.max(0, Math.floor((acc.expiresAt - now) / 1000));
   if (remainingSeconds <= 0) {
-    keyItem.status = 'expired';
-    saveKeys(keys);
+    acc.status = 'expired';
+    saveKeys(accounts);
     return res.status(200).json({
       valid: false,
       status: 'failed',
       expired: true,
-      message: '⚠️ License Expired! Need na ng bagong key mula sa Admin.'
+      message: '⚠️ VIP Account Expired! Need na ng bagong account o renewal mula sa Admin.'
     });
   }
 
-  // 7. PASS AUTHENTICATION!
+  // 6. PASS AUTHENTICATION!
   return res.status(200).json({
     valid: true,
     status: 'pass',
-    key: keyItem.key,
-    durationDays: keyItem.durationDays,
-    durationHours: keyItem.durationHours,
-    activatedAt: keyItem.activatedAt,
-    expiresAt: keyItem.expiresAt,
+    username: acc.username,
+    durationDays: acc.durationDays,
+    durationHours: acc.durationHours,
+    activatedAt: acc.activatedAt,
+    expiresAt: acc.expiresAt,
     remainingSeconds: remainingSeconds,
-    hwid: keyItem.hwid,
-    notes: keyItem.notes,
-    message: '✅ Key Verified & Authenticated! Enjoy VIP Aim Assist.'
+    hwidBound: acc.hwid,
+    message: `✅ AUTHENTICATED! VIP Active (${Math.ceil(remainingSeconds / 3600)}h remaining)`
   });
 };

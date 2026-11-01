@@ -1,6 +1,6 @@
 // Ninja VIP Admin Dashboard & Landing Page Script
 let currentAdminToken = sessionStorage.getItem('ninja_admin_token') || '';
-let loadedKeys = [];
+let loadedAccounts = [];
 
 // DOM Elements
 const landingSection = document.getElementById('landingSection');
@@ -35,11 +35,13 @@ const closeModalBtn = document.getElementById('closeModalBtn');
 const createKeyForm = document.getElementById('createKeyForm');
 
 const testKeyForm = document.getElementById('testKeyForm');
-const testKeyInput = document.getElementById('testKeyInput');
+const testUsernameInput = document.getElementById('testUsernameInput');
+const testPasswordInput = document.getElementById('testPasswordInput');
 const testResultBox = document.getElementById('testResultBox');
 const apiEndpointUrl = document.getElementById('apiEndpointUrl');
 const copyEndpointBtn = document.getElementById('copyEndpointBtn');
 const backupBtn = document.getElementById('backupBtn');
+const btnGenPassword = document.getElementById('btnGenPassword');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -47,7 +49,6 @@ document.addEventListener('DOMContentLoaded', () => {
     apiEndpointUrl.textContent = `${window.location.origin}/api/validate`;
   }
 
-  // If already authenticated in current session, go straight to dashboard
   if (currentAdminToken) {
     checkTokenAndLoad();
   } else {
@@ -59,7 +60,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initEventListeners() {
-  // Open Admin Login Modal
   if (openAdminLoginBtn) {
     openAdminLoginBtn.addEventListener('click', () => {
       adminLoginModal.classList.remove('hidden');
@@ -83,13 +83,21 @@ function initEventListeners() {
     });
   }
 
-  // Toggle admin key visibility
   const toggleBtn = document.getElementById('toggleKeyVisibility');
   if (toggleBtn) {
     toggleBtn.addEventListener('click', () => {
       const type = adminKeyInput.getAttribute('type') === 'password' ? 'text' : 'password';
       adminKeyInput.setAttribute('type', type);
       toggleBtn.innerHTML = type === 'password' ? '<i class="fa-regular fa-eye text-xs"></i>' : '<i class="fa-regular fa-eye-slash text-xs"></i>';
+    });
+  }
+
+  // Random Password Generator
+  if (btnGenPassword) {
+    btnGenPassword.addEventListener('click', () => {
+      const pass = 'vip' + Math.random().toString(36).substring(2, 8);
+      document.getElementById('accountPasswordInput').value = pass;
+      showToast(`Generated: ${pass}`, 'info');
     });
   }
 
@@ -111,37 +119,54 @@ function initEventListeners() {
         currentAdminToken = data.token;
         sessionStorage.setItem('ninja_admin_token', currentAdminToken);
         adminLoginModal.classList.add('hidden');
-        showToast('Login Successful! Welcome Master Admin.', 'success');
+        loginAlert.classList.add('hidden');
         showDashboard();
         loadDashboardData();
+        showToast('Authenticated as Master Admin', 'success');
       } else {
-        showLoginError(data.message || 'Invalid Master Admin Key!');
+        showLoginError(data.message || 'Invalid Master Admin Key');
       }
     } catch (err) {
-      showLoginError('Network Error: Could not connect to API');
+      showLoginError('Connection error to auth endpoint');
     }
   });
 
   // Logout
-  logoutBtn.addEventListener('click', () => {
-    currentAdminToken = '';
-    sessionStorage.removeItem('ninja_admin_token');
-    showLanding();
-    showToast('Logged out of Admin Session', 'info');
-  });
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      sessionStorage.removeItem('ninja_admin_token');
+      currentAdminToken = '';
+      showLanding();
+      showToast('Logged out of Admin Portal', 'info');
+    });
+  }
 
-  // Key Modal Controls
-  newKeyModalBtn.addEventListener('click', () => keyModal.classList.remove('hidden'));
-  closeModalBtn.addEventListener('click', () => keyModal.classList.add('hidden'));
+  // Create Account Modal Toggle
+  if (newKeyModalBtn) {
+    newKeyModalBtn.addEventListener('click', () => {
+      keyModal.classList.remove('hidden');
+      document.getElementById('accountUsernameInput').focus();
+    });
+  }
+  if (closeModalBtn) {
+    closeModalBtn.addEventListener('click', () => {
+      keyModal.classList.add('hidden');
+    });
+  }
 
-  // Create Key Form
+  // Create VIP Account Form Submit
   createKeyForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const username = document.getElementById('accountUsernameInput').value.trim();
+    const password = document.getElementById('accountPasswordInput').value.trim();
     const durationHours = parseFloat(document.getElementById('selectedHours').value) || 24;
     const durationDays = parseFloat(document.getElementById('selectedDays').value) || 1;
-    const customKey = document.getElementById('customKeyInput').value.trim();
-    const count = parseInt(document.getElementById('keyCountInput').value) || 1;
-    const notes = document.getElementById('keyNotesInput').value.trim();
+    const notes = document.getElementById('accountNotesInput').value.trim();
+
+    if (!username || !password) {
+      showToast('Username at Password ay kailangan!', 'error');
+      return;
+    }
 
     try {
       const res = await fetch('/api/keys', {
@@ -151,10 +176,10 @@ function initEventListeners() {
           'Authorization': `Bearer ${currentAdminToken}`
         },
         body: JSON.stringify({
-          customKey,
+          username,
+          password,
           durationHours,
           durationDays,
-          count,
           notes
         })
       });
@@ -165,27 +190,28 @@ function initEventListeners() {
         createKeyForm.reset();
         document.getElementById('selectedHours').value = 24;
         document.getElementById('selectedDays').value = 1;
-        showToast(`Created ${data.keys.length} Key(s) Successfully!`, 'success');
+        showToast(`VIP Account [${username}] Created!`, 'success');
         loadDashboardData();
       } else {
-        showToast(data.message || 'Failed to generate key', 'error');
+        showToast(data.message || 'Failed to create account', 'error');
       }
     } catch (err) {
       showToast('Error communicating with API', 'error');
     }
   });
 
-  // Test / Authenticate Key Form
+  // Test / Authenticate Account Form
   testKeyForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const key = testKeyInput.value.trim().toUpperCase();
-    if (!key) return;
+    const username = testUsernameInput.value.trim();
+    const password = testPasswordInput.value.trim();
+    if (!username || !password) return;
 
     try {
       const res = await fetch('/api/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key, hwid: 'TEST_CONSOLE_HWID_EMULATOR' })
+        body: JSON.stringify({ username, password, hwid: 'TEST_CONSOLE_HWID_EMULATOR' })
       });
       const result = await res.json();
 
@@ -196,10 +222,10 @@ function initEventListeners() {
           <div class="font-bold flex items-center gap-1.5 text-sm text-cyberGreen">
             <i class="fa-solid fa-circle-check"></i> AUTHENTICATION PASS (VIP)
           </div>
-          <div><b>Key:</b> ${result.key}</div>
+          <div><b>Username:</b> ${result.username}</div>
           <div><b>Duration:</b> ${result.durationDays} Days (${result.durationHours} Hours)</div>
           <div><b>Remaining:</b> ${formatSeconds(result.remainingSeconds)}</div>
-          <div><b>HWID Lock:</b> ${result.hwid}</div>
+          <div><b>HWID Lock:</b> ${result.hwidBound}</div>
           <div class="text-[11px] text-green-400 mt-2">${result.message}</div>
         `;
       } else {
@@ -209,11 +235,11 @@ function initEventListeners() {
             <i class="fa-solid fa-circle-xmark"></i> AUTHENTICATION FAILED (INVALID)
           </div>
           <div>${result.message}</div>
-          <div class="text-[11px] text-slate-400 mt-1">Status: Kick Out / Prompt for New Key</div>
+          <div class="text-[11px] text-slate-400 mt-1">Status: ACCESS DENIED (Strict Reject)</div>
         `;
       }
     } catch (err) {
-      showToast('Error testing key', 'error');
+      showToast('Error testing account', 'error');
     }
   });
 
@@ -226,18 +252,18 @@ function initEventListeners() {
 
   // Backup DB Export
   backupBtn.addEventListener('click', () => {
-    const blob = new Blob([JSON.stringify(loadedKeys, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(loadedAccounts, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `ninja_vip_keys_backup_${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `ninja_vip_accounts_${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
-    showToast('License Database Backup exported!', 'success');
+    showToast('Accounts Database Backup exported!', 'success');
   });
 
   // Filter & Search
-  searchInput.addEventListener('input', renderKeysTable);
-  statusFilter.addEventListener('change', renderKeysTable);
+  searchInput.addEventListener('input', renderAccountsTable);
+  statusFilter.addEventListener('change', renderAccountsTable);
 }
 
 function initDurationPills() {
@@ -281,27 +307,27 @@ async function loadDashboardData() {
     const data = await res.json();
 
     if (data.success) {
-      loadedKeys = data.keys || [];
+      loadedAccounts = data.accounts || [];
       statTotal.textContent = data.stats.total;
       statActive.textContent = data.stats.active;
       statExpired.textContent = data.stats.expired;
       statBound.textContent = data.stats.boundDevices;
-      renderKeysTable();
+      renderAccountsTable();
     }
   } catch (err) {
-    showToast('Failed to load keys data', 'error');
+    showToast('Failed to load accounts data', 'error');
   }
 }
 
-function renderKeysTable() {
+function renderAccountsTable() {
   const query = searchInput.value.toLowerCase().trim();
   const filter = statusFilter.value;
 
-  const filtered = loadedKeys.filter(k => {
-    const matchesQuery = k.key.toLowerCase().includes(query) ||
-                         (k.notes && k.notes.toLowerCase().includes(query)) ||
-                         (k.hwid && k.hwid.toLowerCase().includes(query));
-    const matchesFilter = filter === 'all' || k.status === filter;
+  const filtered = loadedAccounts.filter(a => {
+    const matchesQuery = (a.username && a.username.toLowerCase().includes(query)) ||
+                         (a.notes && a.notes.toLowerCase().includes(query)) ||
+                         (a.hwid && a.hwid.toLowerCase().includes(query));
+    const matchesFilter = filter === 'all' || a.status === filter;
     return matchesQuery && matchesFilter;
   });
 
@@ -313,50 +339,56 @@ function renderKeysTable() {
   }
   emptyTableState.classList.add('hidden');
 
-  filtered.forEach(k => {
+  filtered.forEach(a => {
     const tr = document.createElement('tr');
     tr.className = 'hover:bg-white/[0.02] transition-colors border-b border-white/5';
 
     let statusBadge = '';
-    if (k.status === 'active') {
+    if (a.status === 'active') {
       statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-green-500/10 text-cyberGreen border border-green-500/20">PASS (ACTIVE)</span>';
-    } else if (k.status === 'expired') {
+    } else if (a.status === 'expired') {
       statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/10 text-cyberCrimson border border-red-500/20">FAILED (EXPIRED)</span>';
     } else {
       statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-500/10 text-slate-400 border border-slate-500/20">REVOKED</span>';
     }
 
     let timeDisplay = '';
-    if (!k.activatedAt) {
+    if (!a.activatedAt) {
       timeDisplay = '<span class="text-slate-500">Unused (Starts on login)</span>';
-    } else if (k.status === 'expired') {
+    } else if (a.status === 'expired') {
       timeDisplay = '<span class="text-cyberCrimson font-bold">Expired</span>';
-    } else if (k.remainingSeconds !== null) {
-      timeDisplay = `<span class="text-cyberCyan font-bold">${formatSeconds(k.remainingSeconds)}</span>`;
+    } else if (a.remainingSeconds !== null) {
+      timeDisplay = `<span class="text-cyberCyan font-bold">${formatSeconds(a.remainingSeconds)}</span>`;
     }
 
     tr.innerHTML = `
       <td class="py-3 px-4 font-mono font-bold text-white flex items-center gap-2">
-        <span>${k.key}</span>
-        <button onclick="copyToClipboard('${k.key}')" class="text-slate-500 hover:text-cyan-400 p-1" title="Copy Key">
+        <span>${a.username}</span>
+        <button onclick="copyToClipboard('${a.username}')" class="text-slate-500 hover:text-cyan-400 p-1" title="Copy Username">
           <i class="fa-regular fa-copy text-xs"></i>
         </button>
       </td>
-      <td class="py-3 px-4 text-slate-300 font-mono">${k.durationDays >= 1 ? `${k.durationDays} Days` : `${k.durationHours} Hours`}</td>
+      <td class="py-3 px-4 text-slate-300 font-mono flex items-center gap-2">
+        <span>${a.password}</span>
+        <button onclick="copyToClipboard('${a.password}')" class="text-slate-500 hover:text-cyan-400 p-1" title="Copy Password">
+          <i class="fa-regular fa-copy text-xs"></i>
+        </button>
+      </td>
+      <td class="py-3 px-4 text-slate-300 font-mono">${a.durationDays >= 1 ? `${a.durationDays} Days` : `${a.durationHours} Hours`}</td>
       <td class="py-3 px-4 font-mono">${timeDisplay}</td>
       <td class="py-3 px-4">${statusBadge}</td>
-      <td class="py-3 px-4 text-slate-400 font-mono truncate max-w-[120px]" title="${k.hwid || 'No device bound'}">
-        ${k.hwid ? `<span class="text-cyberGold text-[11px]"><i class="fa-solid fa-lock text-[9px] mr-1"></i>${k.hwid.slice(0, 10)}...</span>` : '<span class="text-slate-600">Unbound</span>'}
+      <td class="py-3 px-4 text-slate-400 font-mono truncate max-w-[120px]" title="${a.hwid || 'No device bound'}">
+        ${a.hwid ? `<span class="text-cyberGold text-[11px]"><i class="fa-solid fa-lock text-[9px] mr-1"></i>${a.hwid.slice(0, 10)}...</span>` : '<span class="text-slate-600">Unbound</span>'}
       </td>
-      <td class="py-3 px-4 text-slate-400 text-xs truncate max-w-[120px]">${k.notes || '-'}</td>
+      <td class="py-3 px-4 text-slate-400 text-xs truncate max-w-[120px]">${a.notes || '-'}</td>
       <td class="py-3 px-4 text-right">
         <div class="flex items-center justify-end gap-1.5">
-          ${k.hwid ? `<button onclick="resetHwid('${k.id}')" class="px-2 py-1 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-300 rounded text-[11px]" title="Reset HWID Lock">Reset HWID</button>` : ''}
-          <button onclick="extendTime('${k.id}', 24)" class="px-2 py-1 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 rounded text-[11px]" title="+24 Hours">+24H</button>
-          <button onclick="toggleRevoke('${k.id}', '${k.status}')" class="px-2 py-1 ${k.status === 'revoked' ? 'bg-green-500/10 text-green-300' : 'bg-red-500/10 text-red-300'} rounded text-[11px]" title="Toggle Revoke">
-            ${k.status === 'revoked' ? 'Unban' : 'Revoke'}
+          ${a.hwid ? `<button onclick="resetHwid('${a.id}')" class="px-2 py-1 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-300 rounded text-[11px]" title="Reset HWID Lock">Reset HWID</button>` : ''}
+          <button onclick="extendTime('${a.id}', 1)" class="px-2 py-1 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 rounded text-[11px]" title="+1 Day">+1D</button>
+          <button onclick="toggleRevoke('${a.id}', '${a.status}')" class="px-2 py-1 ${a.status === 'revoked' ? 'bg-green-500/10 text-green-300' : 'bg-red-500/10 text-red-300'} rounded text-[11px]" title="Toggle Revoke">
+            ${a.status === 'revoked' ? 'Unban' : 'Revoke'}
           </button>
-          <button onclick="deleteKey('${k.id}')" class="p-1 text-slate-500 hover:text-red-400" title="Delete Key">
+          <button onclick="deleteAccount('${a.id}')" class="p-1 text-slate-500 hover:text-red-400" title="Delete Account">
             <i class="fa-solid fa-trash-can text-xs"></i>
           </button>
         </div>
@@ -387,7 +419,7 @@ async function resetHwid(id) {
   }
 }
 
-async function extendTime(id, hours) {
+async function extendTime(id, days) {
   try {
     const res = await fetch('/api/keys', {
       method: 'PUT',
@@ -395,11 +427,11 @@ async function extendTime(id, hours) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${currentAdminToken}`
       },
-      body: JSON.stringify({ id, action: 'extend_time', extendHours: hours })
+      body: JSON.stringify({ id, action: 'extend', addDays: days })
     });
     const d = await res.json();
     if (d.success) {
-      showToast(`Added +${hours} Hours to key!`, 'success');
+      showToast(`Added +${days} Days!`, 'success');
       loadDashboardData();
     }
   } catch (err) {
@@ -408,7 +440,7 @@ async function extendTime(id, hours) {
 }
 
 async function toggleRevoke(id, currentStatus) {
-  const newStatus = currentStatus === 'revoked' ? 'active' : 'revoked';
+  const action = currentStatus === 'revoked' ? 'activate' : 'revoke';
   try {
     const res = await fetch('/api/keys', {
       method: 'PUT',
@@ -416,11 +448,11 @@ async function toggleRevoke(id, currentStatus) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${currentAdminToken}`
       },
-      body: JSON.stringify({ id, action: 'set_status', newStatus })
+      body: JSON.stringify({ id, action })
     });
     const d = await res.json();
     if (d.success) {
-      showToast(`Key status updated to ${newStatus.toUpperCase()}`, 'info');
+      showToast('Account status updated!', 'info');
       loadDashboardData();
     }
   } catch (err) {
@@ -428,86 +460,85 @@ async function toggleRevoke(id, currentStatus) {
   }
 }
 
-async function deleteKey(id) {
-  if (!confirm('Are you sure you want to delete this key permanently?')) return;
+async function deleteAccount(id) {
+  if (!confirm('Are you sure you want to delete this account permanently?')) return;
   try {
-    const res = await fetch('/api/keys', {
+    const res = await fetch(`/api/keys?id=${id}`, {
       method: 'DELETE',
       headers: {
-        'Content-Type': 'application/json',
         'Authorization': `Bearer ${currentAdminToken}`
-      },
-      body: JSON.stringify({ id })
+      }
     });
     const d = await res.json();
     if (d.success) {
-      showToast('Key deleted permanently', 'info');
+      showToast('Account deleted permanently', 'info');
       loadDashboardData();
     }
   } catch (err) {
-    showToast('Failed to delete key', 'error');
+    showToast('Failed to delete account', 'error');
   }
 }
 
-function copyToClipboard(text) {
-  navigator.clipboard.writeText(text);
-  showToast(`Copied: ${text}`, 'success');
-}
-
-// UI State Toggles
 function showLanding() {
   landingSection.classList.remove('hidden');
-  adminLoginModal.classList.add('hidden');
   dashboardSection.classList.add('hidden');
 }
 
 function showDashboard() {
   landingSection.classList.add('hidden');
-  adminLoginModal.classList.add('hidden');
   dashboardSection.classList.remove('hidden');
 }
 
 function showLoginError(msg) {
-  loginAlertMsg.textContent = msg;
-  loginAlert.className = 'mb-5 p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 bg-red-500/10 border border-red-500/30 text-red-400';
   loginAlert.classList.remove('hidden');
-  loginCard.classList.remove('animate-shake');
-  void loginCard.offsetWidth;
+  loginAlertMsg.textContent = msg;
   loginCard.classList.add('animate-shake');
+  setTimeout(() => loginCard.classList.remove('animate-shake'), 500);
 }
 
 function formatSeconds(sec) {
-  if (sec <= 0) return '0s';
-  const days = Math.floor(sec / 86400);
-  const hours = Math.floor((sec % 86400) / 3600);
-  const minutes = Math.floor((sec % 3600) / 60);
+  if (sec === null || sec === undefined) return '-';
+  if (sec <= 0) return '0s (Expired)';
+  const d = Math.floor(sec / 86400);
+  const h = Math.floor((sec % 86400) / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
 
-  if (days > 0) return `${days}d ${hours}h ${minutes}m`;
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m ${sec % 60}s`;
+  if (d > 0) return `${d}d ${h}h remaining`;
+  if (h > 0) return `${h}h ${m}m remaining`;
+  return `${m}m ${s}s remaining`;
 }
 
-function showToast(msg, type = 'info') {
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text);
+  showToast(`Copied: ${text}`, 'info');
+}
+
+function showToast(message, type = 'info') {
   const container = document.getElementById('toastContainer');
   const toast = document.createElement('div');
-  const colors = {
-    success: 'bg-green-500/20 border-green-500/30 text-green-300',
-    error: 'bg-red-500/20 border-red-500/30 text-red-300',
-    info: 'bg-cyan-500/20 border-cyan-500/30 text-cyan-300'
-  };
-  const icons = {
-    success: 'fa-circle-check',
-    error: 'fa-circle-xmark',
-    info: 'fa-circle-info'
-  };
 
-  toast.className = `p-4 rounded-2xl border shadow-xl backdrop-blur-md text-xs font-semibold flex items-center gap-3 transition-all duration-300 pointer-events-auto ${colors[type] || colors.info}`;
-  toast.innerHTML = `<i class="fa-solid ${icons[type] || icons.info}"></i> <span>${msg}</span>`;
+  const bg = type === 'success' ? 'border-green-500/40 bg-green-950/80 text-green-300' :
+             type === 'error' ? 'border-red-500/40 bg-red-950/80 text-red-300' :
+             'border-cyan-500/40 bg-cyan-950/80 text-cyan-300';
+
+  const icon = type === 'success' ? 'fa-circle-check text-green-400' :
+               type === 'error' ? 'fa-triangle-exclamation text-red-400' :
+               'fa-circle-info text-cyan-400';
+
+  toast.className = `p-3.5 rounded-2xl border ${bg} backdrop-blur-md shadow-2xl flex items-center gap-3 text-xs font-mono max-w-sm pointer-events-auto transition-all transform translate-y-2 opacity-0`;
+  toast.innerHTML = `
+    <i class="fa-solid ${icon} text-base"></i>
+    <span class="truncate">${message}</span>
+  `;
 
   container.appendChild(toast);
+  requestAnimationFrame(() => {
+    toast.classList.remove('translate-y-2', 'opacity-0');
+  });
+
   setTimeout(() => {
-    toast.style.opacity = '0';
-    toast.style.transform = 'translateY(10px)';
+    toast.classList.add('opacity-0', 'translate-x-full');
     setTimeout(() => toast.remove(), 300);
   }, 3500);
 }

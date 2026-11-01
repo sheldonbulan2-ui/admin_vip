@@ -33,38 +33,53 @@ module.exports = (req, res) => {
     });
   }
 
-  const keys = loadKeys();
+  const accounts = loadKeys();
   const now = Date.now();
 
   // Auto-check and update expired status
-  keys.forEach(k => {
-    if (k.status === 'active' && k.expiresAt && now > k.expiresAt) {
-      k.status = 'expired';
+  accounts.forEach(a => {
+    if (a.status === 'active' && a.expiresAt && now > a.expiresAt) {
+      a.status = 'expired';
     }
   });
-  saveKeys(keys);
+  saveKeys(accounts);
 
-  // 1. GET: List all keys & system metrics
+  // 1. GET: List all accounts & system metrics
   if (req.method === 'GET') {
-    const total = keys.length;
-    const active = keys.filter(k => k.status === 'active').length;
-    const expired = keys.filter(k => k.status === 'expired').length;
-    const revoked = keys.filter(k => k.status === 'revoked').length;
-    const boundDevices = keys.filter(k => k.hwid !== null).length;
+    const total = accounts.length;
+    const active = accounts.filter(a => a.status === 'active').length;
+    const expired = accounts.filter(a => a.status === 'expired').length;
+    const revoked = accounts.filter(a => a.status === 'revoked').length;
+    const boundDevices = accounts.filter(a => a.hwid !== null).length;
 
     return res.status(200).json({
       success: true,
       stats: { total, active, expired, revoked, boundDevices },
-      keys: keys.map(k => ({
-        ...k,
-        remainingSeconds: k.expiresAt ? Math.max(0, Math.floor((k.expiresAt - now) / 1000)) : null
+      accounts: accounts.map(a => ({
+        ...a,
+        remainingSeconds: a.expiresAt ? Math.max(0, Math.floor((a.expiresAt - now) / 1000)) : null
       }))
     });
   }
 
-  // 2. POST: Generate new license key
+  // 2. POST: Create VIP Account (Username, Password, Duration)
   if (req.method === 'POST') {
-    const { customKey, durationDays, durationHours, notes, count = 1 } = req.body || {};
+    const { username, password, durationDays, durationHours, notes } = req.body || {};
+
+    if (!username || !username.trim()) {
+      return res.status(400).json({ success: false, message: 'Username is required!' });
+    }
+    if (!password || !password.trim()) {
+      return res.status(400).json({ success: false, message: 'Password is required!' });
+    }
+
+    const cleanUsername = username.trim();
+    const cleanPassword = password.trim();
+
+    // Check duplicate username
+    if (accounts.some(a => a.username.toLowerCase() === cleanUsername.toLowerCase())) {
+      return res.status(400).json({ success: false, message: 'Username already exists! Gumamit ng ibang username.' });
+    }
 
     let days = parseFloat(durationDays) || 0;
     let hours = parseFloat(durationHours) || (days * 24);
@@ -74,98 +89,98 @@ module.exports = (req, res) => {
       days = 1;
     }
 
-    const createdKeys = [];
-    const numToCreate = Math.min(Math.max(1, parseInt(count) || 1), 50);
+    const newAccount = {
+      id: 'acc_' + crypto.randomBytes(8).toString('hex'),
+      username: cleanUsername,
+      password: cleanPassword,
+      durationDays: days,
+      durationHours: hours,
+      status: 'active',
+      hwid: null,
+      notes: notes || 'VIP Account',
+      createdAt: now,
+      activatedAt: null,
+      expiresAt: null
+    };
 
-    for (let i = 0; i < numToCreate; i++) {
-      let finalKey = "";
-      if (customKey && numToCreate === 1) {
-        finalKey = customKey.trim().toUpperCase();
-        if (keys.some(k => k.key === finalKey)) {
-          return res.status(400).json({ success: false, message: 'License key already exists!' });
-        }
-      } else {
-        const randomPart = crypto.randomBytes(6).toString('hex').toUpperCase();
-        finalKey = `NINJA-${randomPart.substring(0, 4)}-${randomPart.substring(4, 8)}-${randomPart.substring(8, 12)}`;
-      }
+    accounts.unshift(newAccount);
+    saveKeys(accounts);
 
-      const newKeyObj = {
-        id: 'key_' + crypto.randomBytes(8).toString('hex'),
-        key: finalKey,
-        durationDays: days,
-        durationHours: hours,
-        status: 'active',
-        hwid: null,
-        notes: notes || 'VIP License',
-        createdAt: now,
-        activatedAt: null,
-        expiresAt: null // Will be set on first validation in APK
-      };
-
-      keys.unshift(newKeyObj);
-      createdKeys.push(newKeyObj);
-    }
-
-    saveKeys(keys);
     return res.status(201).json({
       success: true,
-      message: `Successfully generated ${createdKeys.length} license key(s)`,
-      keys: createdKeys
+      message: `Successfully created VIP account: ${cleanUsername}`,
+      account: newAccount
     });
   }
 
-  // 3. PUT: Update key (Reset HWID, Extend Time, Change Status)
+  // 3. PUT: Manage Account (Reset HWID, Extend, Revoke, Activate)
   if (req.method === 'PUT') {
-    const { id, action, extendHours, newStatus, newNotes } = req.body || {};
-    const keyItem = keys.find(k => k.id === id || k.key === id);
+    const { id, action, addDays } = req.body || {};
+    const acc = accounts.find(a => a.id === id);
 
-    if (!keyItem) {
-      return res.status(404).json({ success: false, message: 'License key not found' });
+    if (!acc) {
+      return res.status(404).json({ success: false, message: 'Account not found' });
     }
 
     if (action === 'reset_hwid') {
-      keyItem.hwid = null;
-    } else if (action === 'extend_time') {
-      const extraHours = parseFloat(extendHours) || 24;
-      const extraMs = extraHours * 3600 * 1000;
-      keyItem.durationHours += extraHours;
-      keyItem.durationDays = parseFloat((keyItem.durationHours / 24).toFixed(1));
-
-      if (keyItem.expiresAt) {
-        keyItem.expiresAt += extraMs;
-        if (keyItem.expiresAt > now && keyItem.status === 'expired') {
-          keyItem.status = 'active';
-        }
-      }
-    } else if (action === 'set_status') {
-      if (['active', 'expired', 'revoked'].includes(newStatus)) {
-        keyItem.status = newStatus;
-      }
-    } else if (action === 'update_notes') {
-      keyItem.notes = newNotes || keyItem.notes;
+      acc.hwid = null;
+      saveKeys(accounts);
+      return res.status(200).json({ success: true, message: `HWID reset for ${acc.username}. Maaari nang gamitin sa bagong device.` });
     }
 
-    saveKeys(keys);
+    if (action === 'revoke') {
+      acc.status = 'revoked';
+      saveKeys(accounts);
+      return res.status(200).json({ success: true, message: `Account ${acc.username} has been REVOKED.` });
+    }
+
+    if (action === 'activate') {
+      acc.status = 'active';
+      saveKeys(accounts);
+      return res.status(200).json({ success: true, message: `Account ${acc.username} set to ACTIVE.` });
+    }
+
+    if (action === 'extend') {
+      const daysToAdd = parseFloat(addDays) || 1;
+      const msToAdd = daysToAdd * 24 * 3600 * 1000;
+      acc.durationDays += daysToAdd;
+      acc.durationHours += daysToAdd * 24;
+
+      if (acc.expiresAt && acc.expiresAt > now) {
+        acc.expiresAt += msToAdd;
+      } else {
+        acc.expiresAt = now + msToAdd;
+      }
+      acc.status = 'active';
+      saveKeys(accounts);
+
+      return res.status(200).json({
+        success: true,
+        message: `Extended ${acc.username} by ${daysToAdd} days`,
+        account: acc
+      });
+    }
+
+    return res.status(400).json({ success: false, message: 'Invalid action' });
+  }
+
+  // 4. DELETE: Delete Account
+  if (req.method === 'DELETE') {
+    const id = req.query.id || req.body?.id;
+    const index = accounts.findIndex(a => a.id === id);
+
+    if (index === -1) {
+      return res.status(404).json({ success: false, message: 'Account not found' });
+    }
+
+    const removed = accounts.splice(index, 1);
+    saveKeys(accounts);
+
     return res.status(200).json({
       success: true,
-      message: 'Key updated successfully',
-      key: keyItem
+      message: `Account ${removed[0].username} deleted successfully`
     });
   }
 
-  // 4. DELETE: Remove key
-  if (req.method === 'DELETE') {
-    const { id } = req.body || req.query || {};
-    const index = keys.findIndex(k => k.id === id || k.key === id);
-
-    if (index === -1) {
-      return res.status(404).json({ success: false, message: 'Key not found' });
-    }
-
-    keys.splice(index, 1);
-    saveKeys(keys);
-    return res.status(200).json({ success: true, message: 'Key deleted successfully' });
-  }
-
-  return res.status(405).json({ success: false, message: 'Method Not Allowed' });
+  return res.status(405).json({ message: 'Method not allowed' });
 };

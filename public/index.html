@@ -318,7 +318,7 @@
             <i class="fa-solid fa-download"></i> <span class="hidden sm:inline">Backup DB</span>
           </button>
           <button id="newKeyModalBtn" class="px-4 py-2 bg-cyberCyan hover:bg-cyan-300 text-black font-extrabold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-lg shadow-cyan-500/20">
-            <i class="fa-solid fa-plus font-bold"></i> <span>Create Key</span>
+            <i class="fa-solid fa-user-plus font-bold"></i> <span>Create VIP Account</span>
           </button>
           <button id="logoutBtn" class="p-2.5 bg-red-500/10 hover:bg-red-500/20 text-cyberCrimson border border-red-500/20 rounded-xl text-xs transition-all" title="Logout">
             <i class="fa-solid fa-arrow-right-from-bracket"></i>
@@ -372,25 +372,31 @@
       <!-- Action & Live Test Card Row -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        <!-- Live Key Authenticator (APK Emulator) -->
+        <!-- Live Account Authenticator (APK Emulator) -->
         <div class="glass-panel p-6 rounded-2xl border border-white/10 lg:col-span-1">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-sm font-extrabold uppercase tracking-wider text-white flex items-center gap-2">
-              <i class="fa-solid fa-flask-vial text-cyberCyan"></i> Authenticate Key Tester
+              <i class="fa-solid fa-flask-vial text-cyberCyan"></i> Authenticate Account Tester
             </h3>
             <span class="text-[10px] font-mono bg-cyan-500/10 text-cyan-400 px-2 py-0.5 rounded border border-cyan-500/20">APK Emulator</span>
           </div>
           <p class="text-xs text-slate-400 mb-4">
-            Subukan ang kahit anong key dito para makita kung <b>PASS</b> o <b>FAILED</b> bago ibigay sa player.
+            Subukan ang kahit anong <b>Username & Password</b> dito para ma-verify kung <b>PASS</b> o <b>FAILED</b> gaya sa APK.
           </p>
 
           <form id="testKeyForm" class="space-y-3">
             <div>
-              <input type="text" id="testKeyInput" placeholder="NINJA-XXXX-XXXX-XXXX" required
-                     class="w-full px-3.5 py-2.5 bg-black/40 border border-white/10 rounded-xl text-xs font-mono focus:border-cyberCyan focus:outline-none uppercase text-white">
+              <label class="block text-[11px] text-slate-400 uppercase font-mono mb-1">Username</label>
+              <input type="text" id="testUsernameInput" placeholder="Enter VIP Username..." required
+                     class="w-full px-3.5 py-2.5 bg-black/40 border border-white/10 rounded-xl text-xs font-mono focus:border-cyberCyan focus:outline-none text-white">
+            </div>
+            <div>
+              <label class="block text-[11px] text-slate-400 uppercase font-mono mb-1">Password</label>
+              <input type="text" id="testPasswordInput" placeholder="Enter VIP Password..." required
+                     class="w-full px-3.5 py-2.5 bg-black/40 border border-white/10 rounded-xl text-xs font-mono focus:border-cyberCyan focus:outline-none text-white">
             </div>
             <button type="submit" class="w-full py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all border border-white/10 flex items-center justify-center gap-2">
-              <i class="fa-solid fa-check-double text-cyan-400"></i> Test & Verify Key
+              <i class="fa-solid fa-check-double text-cyan-400"></i> Test & Verify Account
             </button>
           </form>
 
@@ -441,26 +447,26 @@
 
       </div>
 
-      <!-- Main Keys Table & Filter Section -->
+      <!-- Main Accounts Table & Filter Section -->
       <div class="glass-panel rounded-2xl border border-white/10 overflow-hidden">
         <!-- Table Header Controls -->
         <div class="p-5 border-b border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h3 class="text-base font-extrabold text-white uppercase tracking-tight">Active License Keys Database</h3>
-            <p class="text-xs text-slate-400">Listahan ng lahat ng keys na may duration countdown at device bindings</p>
+            <h3 class="text-base font-extrabold text-white uppercase tracking-tight">VIP Accounts Database</h3>
+            <p class="text-xs text-slate-400">Listahan ng lahat ng VIP Username & Password na may duration at HWID binding</p>
           </div>
 
           <div class="flex items-center gap-3">
             <!-- Search Input -->
             <div class="relative">
               <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
-              <input type="text" id="searchInput" placeholder="Search key, notes, HWID..."
+              <input type="text" id="searchInput" placeholder="Search username, HWID..."
                      class="pl-8 pr-4 py-1.5 bg-black/40 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-400 font-mono w-48 sm:w-64">
             </div>
 
             <!-- Filter Dropdown -->
             <select id="statusFilter" class="bg-black/40 border border-white/10 rounded-xl text-xs text-white px-3 py-1.5 focus:outline-none focus:border-cyan-400 font-mono">
-              <option value="all">All Keys</option>
+              <option value="all">All Accounts</option>
               <option value="active">Active (Pass)</option>
               <option value="expired">Expired (Failed)</option>
               <option value="revoked">Revoked</option>
@@ -473,7 +479,8 @@
           <table class="w-full text-left text-xs">
             <thead class="bg-black/40 text-slate-400 uppercase font-mono text-[11px] border-b border-white/5">
               <tr>
-                <th class="py-3.5 px-4">License Key</th>
+                <th class="py-3.5 px-4">VIP Username</th>
+                <th class="py-3.5 px-4">Password</th>
                 <th class="py-3.5 px-4">Duration</th>
                 <th class="py-3.5 px-4">Remaining Time</th>
                 <th class="py-3.5 px-4">Status</th>
@@ -490,8 +497,8 @@
 
         <!-- Empty state -->
         <div id="emptyTableState" class="hidden p-12 text-center text-slate-500">
-          <i class="fa-solid fa-key text-3xl mb-3 text-slate-600"></i>
-          <p class="text-sm">Walang nakitang License Key. Mag-generate ng bago gamit ang "Create Key" button.</p>
+          <i class="fa-solid fa-users text-3xl mb-3 text-slate-600"></i>
+          <p class="text-sm">Walang nakitang VIP Account. Gumawa ng bago gamit ang "New Account" button.</p>
         </div>
       </div>
 
@@ -507,12 +514,12 @@
 
   </div>
 
-  <!-- ==================== 4. CREATE NEW KEY MODAL ==================== -->
+  <!-- ==================== 4. CREATE NEW VIP ACCOUNT MODAL ==================== -->
   <div id="keyModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
     <div class="glass-panel max-w-lg w-full p-6 sm:p-8 rounded-3xl border border-white/20 shadow-2xl relative animate-scale-up">
       <div class="flex items-center justify-between pb-4 border-b border-white/10 mb-6">
         <h3 class="text-base font-extrabold uppercase text-white flex items-center gap-2">
-          <i class="fa-solid fa-bolt text-cyberCyan"></i> Generate VIP License Keys
+          <i class="fa-solid fa-user-shield text-cyberCyan"></i> Create New VIP Account
         </h3>
         <button id="closeModalBtn" class="text-slate-400 hover:text-white text-lg">
           <i class="fa-solid fa-xmark"></i>
@@ -520,6 +527,23 @@
       </div>
 
       <form id="createKeyForm" class="space-y-4">
+        <!-- Username Input -->
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">VIP Username</label>
+          <input type="text" id="accountUsernameInput" placeholder="Halimbawa: john_vip88" required
+                 class="w-full px-3.5 py-2.5 bg-black/40 border border-white/10 rounded-xl text-xs font-mono text-white focus:outline-none focus:border-cyan-400">
+        </div>
+
+        <!-- Password Input -->
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-300">VIP Password</label>
+            <button type="button" id="btnGenPassword" class="text-[10px] text-cyberCyan hover:underline font-mono">🎲 Random Password</button>
+          </div>
+          <input type="text" id="accountPasswordInput" placeholder="Halimbawa: pass12345" required
+                 class="w-full px-3.5 py-2.5 bg-black/40 border border-white/10 rounded-xl text-xs font-mono text-white focus:outline-none focus:border-cyan-400">
+        </div>
+
         <!-- Duration Selector Pills -->
         <div>
           <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">Duration / Expiration Time</label>
@@ -535,29 +559,15 @@
           <input type="hidden" id="selectedDays" value="1">
         </div>
 
-        <!-- Custom Key Option (Optional) -->
+        <!-- Customer / Notes -->
         <div>
-          <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">Custom Key Name (Optional)</label>
-          <input type="text" id="customKeyInput" placeholder="Iwanang blangko para auto-generate (NINJA-XXXX...)"
-                 class="w-full px-3.5 py-2.5 bg-black/40 border border-white/10 rounded-xl text-xs font-mono text-white focus:outline-none focus:border-cyan-400">
-        </div>
-
-        <!-- Quantity -->
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">Quantity (Count)</label>
-            <input type="number" id="keyCountInput" min="1" max="50" value="1"
-                   class="w-full px-3.5 py-2.5 bg-black/40 border border-white/10 rounded-xl text-xs font-mono text-white focus:outline-none focus:border-cyan-400">
-          </div>
-          <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">Customer / Notes</label>
-            <input type="text" id="keyNotesInput" placeholder="Client Discord / User..."
-                   class="w-full px-3.5 py-2.5 bg-black/40 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-400">
-          </div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1">Customer / Notes (Optional)</label>
+          <input type="text" id="accountNotesInput" placeholder="Buyer Facebook / Discord name..."
+                 class="w-full px-3.5 py-2.5 bg-black/40 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-cyan-400">
         </div>
 
         <button type="submit" class="w-full mt-4 py-3 bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-black font-extrabold uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-cyan-500/25 active:scale-[0.98]">
-          ⚡ Generate Key Now
+          ⚡ Create VIP Account Now
         </button>
       </form>
     </div>
