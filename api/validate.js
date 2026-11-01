@@ -1,35 +1,7 @@
 const querystring = require('querystring');
 const { loadKeys, saveKeys } = require('../lib/db');
 
-async function parseBody(req) {
-  let raw = '';
-
-  if (req.body) {
-    if (typeof req.body === 'object' && !Buffer.isBuffer(req.body) && Object.keys(req.body).length > 0) {
-      return req.body;
-    }
-    raw = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : String(req.body);
-  }
-
-  if (!raw) {
-    raw = await new Promise((resolve) => {
-      let buf = '';
-      req.on('data', chunk => { buf += chunk; });
-      req.on('end', () => resolve(buf));
-      req.on('error', () => resolve(''));
-    });
-  }
-
-  if (!raw) return {};
-
-  try {
-    return JSON.parse(raw);
-  } catch (e) {
-    return querystring.parse(raw);
-  }
-}
-
-const handler = async (req, res) => {
+module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-HWID');
@@ -38,10 +10,38 @@ const handler = async (req, res) => {
     return res.status(200).end();
   }
 
-  const b = await parseBody(req);
+  // 1. Resolve raw body from all possible Vercel / Node sources
+  let b = {};
+  const rawBodySource = req.body;
+  const bodyType = typeof rawBodySource;
+  const isBuf = Buffer.isBuffer(rawBodySource);
+
+  if (isBuf) {
+    const str = rawBodySource.toString('utf8');
+    try { b = JSON.parse(str); } catch (e) { b = querystring.parse(str); }
+  } else if (bodyType === 'string') {
+    try { b = JSON.parse(rawBodySource); } catch (e) { b = querystring.parse(rawBodySource); }
+  } else if (bodyType === 'object' && rawBodySource !== null) {
+    b = rawBodySource;
+  }
+
+  // 2. If b is still empty and stream might have data
+  if (Object.keys(b).length === 0 && !req.readableEnded) {
+    const streamData = await new Promise((resolve) => {
+      let buf = '';
+      req.on('data', chunk => { buf += chunk; });
+      req.on('end', () => resolve(buf));
+      req.on('error', () => resolve(''));
+      setTimeout(() => resolve(''), 500); // 500ms safety timeout
+    });
+    if (streamData) {
+      try { b = JSON.parse(streamData); } catch (e) { b = querystring.parse(streamData); }
+    }
+  }
+
   const q = req.query || {};
 
-  // Support Volley form params, standard JSON, and query fallback
+  // Find params across body and query
   const usernameParam = (b['username-activation'] || b.username || q['username-activation'] || q.username || '').toString().trim();
   const passwordParam = (b['password-activation'] || b.password || q['password-activation'] || q.password || '').toString().trim();
   const keyParam = (b.key || q.key || '').toString().trim();
@@ -55,6 +55,14 @@ const handler = async (req, res) => {
       status: status, // "enable" on pass, "failed" on reject
       valid: valid,
       message: message,
+      debug: {
+        bodyType,
+        isBuf,
+        bKeys: Object.keys(b),
+        qKeys: Object.keys(q),
+        hasUser: !!usernameParam,
+        hasPass: !!passwordParam
+      },
       ...extra
     };
     return res.status(200).json([ payload ]);
@@ -78,9 +86,7 @@ const handler = async (req, res) => {
       return sendResponse(false, 'failed', '❌ Invalid License Key / Username! Not registered.');
     }
   } else {
-    return sendResponse(false, 'failed', '❌ Username and Password are required!', {
-      debugReceived: b
-    });
+    return sendResponse(false, 'failed', '❌ Username and Password are required!');
   }
 
   const now = Date.now();
@@ -127,11 +133,3 @@ const handler = async (req, res) => {
     hwidBound: acc.hwid
   });
 };
-
-handler.config = {
-  api: {
-    bodyParser: false
-  }
-};
-
-module.exports = handler;
