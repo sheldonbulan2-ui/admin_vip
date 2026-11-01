@@ -8,7 +8,7 @@ const keysHandler = require('./api/keys');
 const validateHandler = require('./api/validate');
 
 const PORT = process.env.PORT || 3000;
-const PUBLIC_DIR = __dirname;
+const PUBLIC_DIR = path.join(__dirname, 'public');
 
 function enhanceResponse(res) {
   res.status = function(code) {
