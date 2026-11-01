@@ -9,77 +9,65 @@ module.exports = (req, res) => {
     return res.status(200).end();
   }
 
-  // Extract credentials from POST body or GET query
-  const usernameParam = (req.method === 'POST' ? req.body?.username : req.query?.username) || '';
-  const passwordParam = (req.method === 'POST' ? req.body?.password : req.query?.password) || '';
-  const hwidParam = (req.method === 'POST' ? (req.body?.hwid || req.headers['x-hwid']) : req.query?.hwid) || 'UNKNOWN_HWID';
+  // Support both JSON body and URL-encoded form parameters
+  const b = req.body || {};
+  const q = req.query || {};
 
-  // Support legacy 'key' fallback if somebody still uses it
-  const keyParam = (req.method === 'POST' ? req.body?.key : req.query?.key) || '';
+  const usernameParam = b['username-activation'] || b.username || q['username-activation'] || q.username || '';
+  const passwordParam = b['password-activation'] || b.password || q['password-activation'] || q.password || '';
+  const keyParam = b.key || q.key || '';
+  const hwidParam = b.hwid || req.headers['x-hwid'] || q.hwid || 'UNKNOWN_HWID';
 
   const accounts = loadKeys();
   let acc = null;
 
+  function sendResponse(valid, status, message, extra = {}) {
+    const payload = {
+      status: status, // "enable" on pass, "failed" on reject
+      valid: valid,
+      message: message,
+      ...extra
+    };
+
+    // If request comes from APK (or wants Array format), return array [ payload ]
+    // Also include properties directly so JSON object parsers work seamlessly
+    return res.status(200).json([ payload ]);
+  }
+
   if (usernameParam && passwordParam) {
-    const cleanUser = usernameParam.trim().toLowerCase();
-    const cleanPass = passwordParam.trim();
+    const cleanUser = String(usernameParam).trim().toLowerCase();
+    const cleanPass = String(passwordParam).trim();
     acc = accounts.find(a => a.username && a.username.toLowerCase() === cleanUser);
 
     if (!acc) {
-      return res.status(200).json({
-        valid: false,
-        status: 'failed',
-        message: '❌ Invalid Username! Hindi rehistrado ang account na ito sa Admin.'
-      });
+      return sendResponse(false, 'failed', '❌ Invalid Username! Hindi rehistrado ang account sa Admin.');
     }
 
     if (acc.password !== cleanPass) {
-      return res.status(200).json({
-        valid: false,
-        status: 'failed',
-        message: '❌ Maling Password! Hindi tumutugma ang password na inilagay.'
-      });
+      return sendResponse(false, 'failed', '❌ Maling Password! Hindi tumutugma ang password.');
     }
   } else if (keyParam) {
-    const cleanKey = keyParam.trim().toUpperCase();
+    const cleanKey = String(keyParam).trim().toUpperCase();
     acc = accounts.find(a => (a.key && a.key.toUpperCase() === cleanKey) || (a.username && a.username.toUpperCase() === cleanKey));
     if (!acc) {
-      return res.status(200).json({
-        valid: false,
-        status: 'failed',
-        message: '❌ Invalid License Key / Username! Not registered in Admin.'
-      });
+      return sendResponse(false, 'failed', '❌ Invalid License Key / Username! Not registered.');
     }
   } else {
-    return res.status(400).json({
-      valid: false,
-      status: 'failed',
-      message: '❌ Username and Password are required!'
-    });
+    return sendResponse(false, 'failed', '❌ Username and Password are required!');
   }
 
   const now = Date.now();
 
   // 1. CHECK REVOKED STATUS
   if (acc.status === 'revoked') {
-    return res.status(200).json({
-      valid: false,
-      status: 'failed',
-      message: '🚫 This VIP account has been revoked or banned by Admin.'
-    });
+    return sendResponse(false, 'failed', '🚫 Ang VIP account na ito ay revoked ng Admin.');
   }
 
   // 2. CHECK ALREADY EXPIRED
   if (acc.status === 'expired' || (acc.expiresAt && now >= acc.expiresAt)) {
     acc.status = 'expired';
     saveKeys(accounts);
-    return res.status(200).json({
-      valid: false,
-      status: 'failed',
-      expired: true,
-      message: '⚠️ VIP Account Expired! Di na makakapasok, need na ulit mag-renew sa Admin.',
-      expiresAt: acc.expiresAt
-    });
+    return sendResponse(false, 'failed', '⚠️ Expired na ang VIP account! Mag-renew sa Admin.', { expired: true, expiresAt: acc.expiresAt });
   }
 
   // 3. FIRST ACTIVATION (Bind HWID and compute exact expiration from duration)
@@ -93,11 +81,7 @@ module.exports = (req, res) => {
   } else {
     // 4. HWID DEVICE LOCK CHECK (Single phone security)
     if (acc.hwid && hwidParam !== 'UNKNOWN_HWID' && acc.hwid !== hwidParam) {
-      return res.status(200).json({
-        valid: false,
-        status: 'failed',
-        message: '🔒 Device Mismatch! Naka-bind ang account na ito sa ibang cellphone. Humingi ng HWID reset sa Admin.'
-      });
+      return sendResponse(false, 'failed', '🔒 Device Mismatch! Naka-bind ang account na ito sa ibang cellphone. Humingi ng HWID reset sa Admin.');
     }
 
     if (!acc.hwid && hwidParam !== 'UNKNOWN_HWID') {
@@ -111,25 +95,17 @@ module.exports = (req, res) => {
   if (remainingSeconds <= 0) {
     acc.status = 'expired';
     saveKeys(accounts);
-    return res.status(200).json({
-      valid: false,
-      status: 'failed',
-      expired: true,
-      message: '⚠️ VIP Account Expired! Need na ng bagong account o renewal mula sa Admin.'
-    });
+    return sendResponse(false, 'failed', '⚠️ VIP Account Expired! Need ng bagong account o renewal.', { expired: true });
   }
 
-  // 6. PASS AUTHENTICATION!
-  return res.status(200).json({
-    valid: true,
-    status: 'pass',
+  // 6. PASS AUTHENTICATION! (status: "enable" unlocks the APK)
+  return sendResponse(true, 'enable', `✅ AUTHENTICATED! VIP Active (${Math.ceil(remainingSeconds / 3600)}h remaining)`, {
     username: acc.username,
     durationDays: acc.durationDays,
     durationHours: acc.durationHours,
     activatedAt: acc.activatedAt,
     expiresAt: acc.expiresAt,
     remainingSeconds: remainingSeconds,
-    hwidBound: acc.hwid,
-    message: `✅ AUTHENTICATED! VIP Active (${Math.ceil(remainingSeconds / 3600)}h remaining)`
+    hwidBound: acc.hwid
   });
 };

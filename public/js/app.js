@@ -213,7 +213,8 @@ function initEventListeners() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password, hwid: 'TEST_CONSOLE_HWID_EMULATOR' })
       });
-      const result = await res.json();
+      const raw = await res.json();
+      const result = Array.isArray(raw) ? raw[0] : raw;
 
       testResultBox.classList.remove('hidden');
       if (result.valid) {
