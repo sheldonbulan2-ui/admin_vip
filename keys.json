@@ -1,0 +1,26 @@
+[
+  {
+    "id": "key_demo_1",
+    "key": "NINJA-VIP-DEMO-30D",
+    "durationDays": 30,
+    "durationHours": 720,
+    "status": "active",
+    "hwid": "HWID_PHONE_1",
+    "notes": "Demo 30 Days Key",
+    "createdAt": 1793535893816,
+    "activatedAt": 1793535893819,
+    "expiresAt": 1796127893819
+  },
+  {
+    "id": "key_demo_2",
+    "key": "NINJA-LIFETIME-PASS",
+    "durationDays": 3650,
+    "durationHours": 87600,
+    "status": "active",
+    "hwid": null,
+    "notes": "Lifetime VIP Pass",
+    "createdAt": 1793535893816,
+    "activatedAt": null,
+    "expiresAt": null
+  }
+]

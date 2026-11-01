@@ -1,0 +1,14 @@
+{
+  "name": "ninja-admin-web",
+  "version": "1.0.0",
+  "description": "High-Security VIP Admin Panel & License Manager for Ninja Aim Assist",
+  "main": "api/validate.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": ["8ballpool", "ninja", "license-manager", "vercel"],
+  "author": "Ninja Team",
+  "license": "MIT",
+  "dependencies": {}
+}
