@@ -310,10 +310,25 @@ async function loadDashboardData() {
     if (data.success) {
       loadedAccounts = data.accounts || [];
       window.loadedResellers = data.resellers || [];
+      window.currentAnnouncement = data.announcement || null;
       statTotal.textContent = data.stats.total;
       statActive.textContent = data.stats.active;
       statExpired.textContent = data.stats.expired;
       statBound.textContent = data.stats.boundDevices;
+
+      // Update Announcement Banner in Dashboard
+      const banner = document.getElementById('liveAdminAnnouncementBanner');
+      const bannerTitle = document.getElementById('bannerAnnTitle');
+      const bannerMsg = document.getElementById('bannerAnnMessage');
+      if (banner && window.currentAnnouncement) {
+        if (window.currentAnnouncement.active && window.currentAnnouncement.message) {
+          banner.classList.remove('hidden');
+          bannerTitle.textContent = window.currentAnnouncement.title || 'SYSTEM NOTICE';
+          bannerMsg.textContent = window.currentAnnouncement.message;
+        } else {
+          banner.classList.add('hidden');
+        }
+      }
 
       const badge = document.getElementById('dbStatusBadge');
       if (badge) {
@@ -630,6 +645,82 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       } catch (err) {
         showToast('Failed to create reseller', 'error');
+      }
+    });
+  }
+
+  // Announcement Modal Controls
+  const openAnnBtn = document.getElementById('openAnnouncementBtn');
+  const bannerEditAnnBtn = document.getElementById('bannerEditAnnBtn');
+  const closeAnnBtn = document.getElementById('closeAnnouncementModalBtn');
+  const annModal = document.getElementById('announcementModal');
+  const annForm = document.getElementById('announcementForm');
+  const annTitleInput = document.getElementById('announcementTitleInput');
+  const annMessageInput = document.getElementById('announcementMessageInput');
+  const annActiveInput = document.getElementById('announcementActiveInput');
+  const previewAnnTitle = document.getElementById('previewAnnTitle');
+  const previewAnnMessage = document.getElementById('previewAnnMessage');
+
+  function openAnnouncementModal() {
+    if (window.currentAnnouncement) {
+      annTitleInput.value = window.currentAnnouncement.title || 'SYSTEM NOTICE';
+      annMessageInput.value = window.currentAnnouncement.message || '';
+      annActiveInput.checked = window.currentAnnouncement.active !== false;
+    } else {
+      annTitleInput.value = 'SYSTEM NOTICE';
+      annMessageInput.value = 'Ninja Aim Assist v2.4 Online! Anti-ban safe.';
+      annActiveInput.checked = true;
+    }
+    updatePreview();
+    annModal.classList.remove('hidden');
+  }
+
+  function updatePreview() {
+    previewAnnTitle.textContent = `[${annTitleInput.value || 'NOTICE'}]`;
+    previewAnnMessage.textContent = annMessageInput.value || 'Announcement text preview will appear here...';
+  }
+
+  if (annTitleInput && annMessageInput) {
+    annTitleInput.addEventListener('input', updatePreview);
+    annMessageInput.addEventListener('input', updatePreview);
+  }
+
+  if (openAnnBtn && annModal) {
+    openAnnBtn.addEventListener('click', openAnnouncementModal);
+    if (bannerEditAnnBtn) bannerEditAnnBtn.addEventListener('click', openAnnouncementModal);
+    if (closeAnnBtn) closeAnnBtn.addEventListener('click', () => annModal.classList.add('hidden'));
+
+    annForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const title = annTitleInput.value.trim();
+      const message = annMessageInput.value.trim();
+      const active = annActiveInput.checked;
+
+      try {
+        const res = await fetch('/api/keys', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentAdminToken}`
+          },
+          body: JSON.stringify({
+            action: 'update_announcement',
+            title,
+            message,
+            active
+          })
+        });
+        const d = await res.json();
+        if (d.success) {
+          showToast(d.message, 'success');
+          window.currentAnnouncement = d.announcement;
+          annModal.classList.add('hidden');
+          loadDashboardData();
+        } else {
+          showToast(d.message, 'error');
+        }
+      } catch (err) {
+        showToast('Failed to broadcast announcement', 'error');
       }
     });
   }

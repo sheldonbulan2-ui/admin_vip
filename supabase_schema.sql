@@ -33,17 +33,32 @@ CREATE TABLE IF NOT EXISTS vip_resellers (
   created_at BIGINT
 );
 
--- 3. Insert Initial Default VIP Accounts
+-- 3. Create VIP Announcements Table
+CREATE TABLE IF NOT EXISTS vip_announcements (
+  id TEXT PRIMARY KEY DEFAULT 'global_broadcast',
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  active BOOLEAN DEFAULT true,
+  created_at BIGINT
+);
+
+-- 4. Insert Initial Default VIP Accounts & Announcement
 INSERT INTO vip_accounts (id, username, password, duration_days, duration_hours, status, notes, created_at)
 VALUES 
   ('acc_vip_default', 'vipuser', 'vip123password', 30, 720, 'active', 'Official 30-Day VIP Pass', EXTRACT(EPOCH FROM NOW())::BIGINT * 1000),
   ('acc_master_default', 'masteradmin', 'ninja2026password', 3650, 87600, 'active', 'Lifetime VIP Access', EXTRACT(EPOCH FROM NOW())::BIGINT * 1000)
 ON CONFLICT (username) DO NOTHING;
 
--- 4. Enable Row Level Security (RLS) & Public Policies
+INSERT INTO vip_announcements (id, title, message, active, created_at)
+VALUES ('global_broadcast', 'SYSTEM NOTICE', 'Ninja Aim Assist v2.4 Online! Anti-ban safe.', true, EXTRACT(EPOCH FROM NOW())::BIGINT * 1000)
+ON CONFLICT (id) DO NOTHING;
+
+-- 5. Enable Row Level Security (RLS) & Public Policies
 ALTER TABLE vip_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vip_resellers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vip_announcements ENABLE ROW LEVEL SECURITY;
 
 -- Allow serverless api with anon / service role keys full access
 CREATE POLICY "Allow server access to vip_accounts" ON vip_accounts FOR ALL USING (true);
 CREATE POLICY "Allow server access to vip_resellers" ON vip_resellers FOR ALL USING (true);
+CREATE POLICY "Allow server access to vip_announcements" ON vip_announcements FOR ALL USING (true);

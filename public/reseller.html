@@ -113,6 +113,20 @@
     <!-- Main Content -->
     <main class="max-w-6xl mx-auto w-full px-4 sm:px-6 py-8 flex-1 space-y-6">
 
+      <!-- Live Broadcast Announcement Banner from Admin -->
+      <div id="resellerAnnouncementBanner" class="hidden p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center text-base shrink-0">
+          <i class="fa-solid fa-bullhorn animate-bounce"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-amber-400 text-black font-mono">ADMIN BROADCAST</span>
+            <h4 id="resellerAnnTitle" class="text-xs font-extrabold text-white uppercase"></h4>
+          </div>
+          <p id="resellerAnnMessage" class="text-xs text-slate-300 font-mono mt-0.5"></p>
+        </div>
+      </div>
+
       <!-- Action Card Banner -->
       <div class="glass-card p-6 sm:p-8 rounded-3xl border border-purple-500/20 bg-gradient-to-r from-purple-950/30 via-black to-indigo-950/20 flex flex-col sm:flex-row items-center justify-between gap-6">
         <div class="space-y-1 text-center sm:text-left">
@@ -314,6 +328,20 @@
           renderTable(customerAccounts);
           loginScreen.classList.add('hidden');
           dashboardScreen.classList.remove('hidden');
+
+          // Fetch Admin Broadcast Announcement
+          try {
+            const annRes = await fetch('/api/announcement');
+            const annData = await annRes.json();
+            const banner = document.getElementById('resellerAnnouncementBanner');
+            if (annData.success && annData.announcement && annData.announcement.active && annData.announcement.message) {
+              banner.classList.remove('hidden');
+              document.getElementById('resellerAnnTitle').textContent = annData.announcement.title || 'ADMIN BROADCAST';
+              document.getElementById('resellerAnnMessage').textContent = annData.announcement.message;
+            } else if (banner) {
+              banner.classList.add('hidden');
+            }
+          } catch (e) {}
         } else {
           sessionStorage.removeItem('ninja_reseller_token');
           loginScreen.classList.remove('hidden');

@@ -1,5 +1,5 @@
 const querystring = require('querystring');
-const { loadAccountsAsync, saveAccountAsync, isSupabaseConfigured } = require('../lib/db');
+const { loadAccountsAsync, saveAccountAsync, loadAnnouncementAsync, isSupabaseConfigured } = require('../lib/db');
 
 async function parseBody(req) {
   let raw = '';
@@ -49,13 +49,22 @@ module.exports = async (req, res) => {
 
   // Load from Supabase (or cached fallback)
   const accounts = await loadAccountsAsync();
+  const annObj = await loadAnnouncementAsync();
   let acc = null;
 
   function sendResponse(valid, status, message, extra = {}) {
+    let announcementText = "";
+    if (annObj && annObj.active && annObj.message) {
+      announcementText = `[${annObj.title}] ${annObj.message}`;
+    }
+
     const payload = {
       status: status, // "enable" on pass, "failed" on reject
       valid: valid,
       message: message,
+      announcement: announcementText,
+      announcement_title: annObj ? annObj.title : '',
+      announcement_message: annObj ? annObj.message : '',
       database: isSupabaseConfigured() ? 'supabase' : 'local-cache',
       ...extra
     };

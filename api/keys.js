@@ -6,6 +6,8 @@ const {
   deleteAccountAsync,
   loadResellersAsync,
   saveResellerAsync,
+  loadAnnouncementAsync,
+  saveAnnouncementAsync,
   isSupabaseConfigured 
 } = require('../lib/db');
 
@@ -43,6 +45,7 @@ module.exports = async (req, res) => {
 
   const accounts = await loadAccountsAsync();
   const resellers = await loadResellersAsync();
+  const announcement = await loadAnnouncementAsync();
   const now = Date.now();
 
   // Auto-check and update expired status
@@ -65,6 +68,7 @@ module.exports = async (req, res) => {
       success: true,
       isSupabase: isSupabaseConfigured(),
       stats: { total, active, expired, revoked, boundDevices, resellersCount: resellers.length },
+      announcement: announcement,
       resellers: resellers,
       accounts: accounts.map(a => ({
         ...a,
@@ -106,6 +110,18 @@ module.exports = async (req, res) => {
     target.credits = (target.credits || 0) + (parseInt(credits) || 10);
     await saveResellerAsync(target);
     return res.status(200).json({ success: true, message: `Added credits! New balance: ${target.credits}`, reseller: target });
+  }
+
+  // ANNOUNCEMENT / BROADCAST ACTION
+  if (action === 'update_announcement') {
+    const { title, message, active } = body;
+    const updated = await saveAnnouncementAsync({
+      title: (title || 'SYSTEM NOTICE').trim(),
+      message: (message || '').trim(),
+      active: active !== undefined ? Boolean(active) : true,
+      createdAt: now
+    });
+    return res.status(200).json({ success: true, message: 'Global broadcast announcement published to all APKs!', announcement: updated });
   }
 
   // 3. ACCOUNT ACTIONS: CREATE VIP ACCOUNT
