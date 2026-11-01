@@ -1,5 +1,33 @@
 const querystring = require('querystring');
-const { loadKeys, saveKeys } = require('../lib/db');
+const { loadAccountsAsync, saveAccountAsync, isSupabaseConfigured } = require('../lib/db');
+
+async function parseBody(req) {
+  let raw = '';
+  if (req.body) {
+    if (typeof req.body === 'object' && !Buffer.isBuffer(req.body) && Object.keys(req.body).length > 0) {
+      return req.body;
+    }
+    raw = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : String(req.body);
+  }
+
+  if (!raw && !req.readableEnded) {
+    raw = await new Promise((resolve) => {
+      let buf = '';
+      req.on('data', chunk => { buf += chunk; });
+      req.on('end', () => resolve(buf));
+      req.on('error', () => resolve(''));
+      setTimeout(() => resolve(''), 500);
+    });
+  }
+
+  if (!raw) return {};
+
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    return querystring.parse(raw);
+  }
+}
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -10,44 +38,17 @@ module.exports = async (req, res) => {
     return res.status(200).end();
   }
 
-  // 1. Resolve raw body from all possible Vercel / Node sources
-  let b = {};
-  const rawBodySource = req.body;
-  const bodyType = typeof rawBodySource;
-  const isBuf = Buffer.isBuffer(rawBodySource);
-
-  if (isBuf) {
-    const str = rawBodySource.toString('utf8');
-    try { b = JSON.parse(str); } catch (e) { b = querystring.parse(str); }
-  } else if (bodyType === 'string') {
-    try { b = JSON.parse(rawBodySource); } catch (e) { b = querystring.parse(rawBodySource); }
-  } else if (bodyType === 'object' && rawBodySource !== null) {
-    b = rawBodySource;
-  }
-
-  // 2. If b is still empty and stream might have data
-  if (Object.keys(b).length === 0 && !req.readableEnded) {
-    const streamData = await new Promise((resolve) => {
-      let buf = '';
-      req.on('data', chunk => { buf += chunk; });
-      req.on('end', () => resolve(buf));
-      req.on('error', () => resolve(''));
-      setTimeout(() => resolve(''), 500); // 500ms safety timeout
-    });
-    if (streamData) {
-      try { b = JSON.parse(streamData); } catch (e) { b = querystring.parse(streamData); }
-    }
-  }
-
+  const b = await parseBody(req);
   const q = req.query || {};
 
-  // Find params across body and query
+  // Support Volley query params + form body + JSON
   const usernameParam = (b['username-activation'] || b.username || q['username-activation'] || q.username || '').toString().trim();
   const passwordParam = (b['password-activation'] || b.password || q['password-activation'] || q.password || '').toString().trim();
   const keyParam = (b.key || q.key || '').toString().trim();
-  const hwidParam = (b['user-device-id'] || b.hwid || req.headers['x-hwid'] || q.hwid || 'UNKNOWN_HWID').toString().trim();
+  const hwidParam = (b['user-device-id'] || b.hwid || req.headers['x-hwid'] || q.hwid || q['user-device-id'] || 'UNKNOWN_HWID').toString().trim();
 
-  const accounts = loadKeys();
+  // Load from Supabase (or cached fallback)
+  const accounts = await loadAccountsAsync();
   let acc = null;
 
   function sendResponse(valid, status, message, extra = {}) {
@@ -55,14 +56,7 @@ module.exports = async (req, res) => {
       status: status, // "enable" on pass, "failed" on reject
       valid: valid,
       message: message,
-      debug: {
-        bodyType,
-        isBuf,
-        bKeys: Object.keys(b),
-        qKeys: Object.keys(q),
-        hasUser: !!usernameParam,
-        hasPass: !!passwordParam
-      },
+      database: isSupabaseConfigured() ? 'supabase' : 'local-cache',
       ...extra
     };
     return res.status(200).json([ payload ]);
@@ -99,7 +93,7 @@ module.exports = async (req, res) => {
   // 2. CHECK ALREADY EXPIRED
   if (acc.status === 'expired' || (acc.expiresAt && now >= acc.expiresAt)) {
     acc.status = 'expired';
-    saveKeys(accounts);
+    await saveAccountAsync(acc);
     return sendResponse(false, 'failed', '⚠️ VIP Account Expired! Please renew in Admin.', { expired: true, expiresAt: acc.expiresAt });
   }
 
@@ -110,26 +104,42 @@ module.exports = async (req, res) => {
     acc.expiresAt = now + (durationHours * 60 * 60 * 1000);
   }
 
-  // 4. DEVICE BINDING (HWID Lock)
+  // 4. STRICT HARDWARE ID (HWID) LOCK
   if (!acc.hwid && hwidParam && hwidParam !== 'UNKNOWN_HWID') {
+    // Auto-bind device on first login
     acc.hwid = hwidParam;
   } else if (acc.hwid && hwidParam && hwidParam !== 'UNKNOWN_HWID' && acc.hwid !== hwidParam) {
-    return sendResponse(false, 'failed', '🔒 Device Locked! This account is registered on another device. Contact Admin to reset HWID.');
+    // Reject multiple devices sharing account
+    return sendResponse(false, 'failed', '🔒 Device Locked! Bawal mag-share ng account sa ibang device. Ipa-reset ang HWID sa Admin.', {
+      locked: true,
+      registeredHwid: acc.hwid.substring(0, 8) + '...'
+    });
   }
 
   acc.status = 'active';
-  saveKeys(accounts);
+  acc.lastHeartbeat = now;
+  await saveAccountAsync(acc);
 
   const remainingSeconds = Math.max(0, Math.floor((acc.expiresAt - now) / 1000));
   const remainingHours = Math.floor(remainingSeconds / 3600);
+  const remainingDays = Math.floor(remainingHours / 24);
 
-  return sendResponse(true, 'enable', `✅ AUTHENTICATED! VIP Active (${remainingHours}h remaining)`, {
+  let durationText = '';
+  if (remainingDays > 0) {
+    durationText = `${remainingDays}d ${remainingHours % 24}h`;
+  } else {
+    durationText = `${remainingHours}h`;
+  }
+
+  return sendResponse(true, 'enable', `✅ AUTHENTICATED! VIP Active (${durationText} remaining)`, {
     username: acc.username,
     durationDays: acc.durationDays || 30,
     durationHours: acc.durationHours || 720,
+    remainingDays: remainingDays,
+    remainingHours: remainingHours,
+    remainingSeconds: remainingSeconds,
     activatedAt: acc.activatedAt,
     expiresAt: acc.expiresAt,
-    remainingSeconds: remainingSeconds,
     hwidBound: acc.hwid
   });
 };

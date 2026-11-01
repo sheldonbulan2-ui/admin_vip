@@ -305,20 +305,26 @@
           <div>
             <div class="flex items-center gap-2">
               <h2 class="text-base font-extrabold tracking-tight text-white uppercase">Ninja VIP License Center</h2>
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-500/20 text-cyberGreen border border-green-500/30 flex items-center gap-1">
-                <span class="w-1.5 h-1.5 rounded-full bg-cyberGreen animate-ping"></span> Live Cloud API
+              <span id="dbStatusBadge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Local Cache Mode
               </span>
             </div>
-            <p class="text-xs text-slate-400 font-mono">Vercel Ready • 8 Ball Pool Universal Auth</p>
+            <p class="text-xs text-slate-400 font-mono">Supabase PostgreSQL • 8 Ball Pool Universal Auth</p>
           </div>
         </div>
 
-        <div class="flex items-center gap-3">
-          <button id="backupBtn" title="Export License Database" class="px-3.5 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-semibold text-slate-300 transition-all flex items-center gap-2">
-            <i class="fa-solid fa-download"></i> <span class="hidden sm:inline">Backup DB</span>
+        <div class="flex items-center gap-2.5">
+          <button id="openSqlModalBtn" title="Supabase Database Setup" class="px-3 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-xl text-xs font-semibold text-emerald-400 transition-all flex items-center gap-1.5">
+            <i class="fa-solid fa-database"></i> <span class="hidden sm:inline">Supabase Setup</span>
           </button>
-          <button id="newKeyModalBtn" class="px-4 py-2 bg-cyberCyan hover:bg-cyan-300 text-black font-extrabold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-lg shadow-cyan-500/20">
-            <i class="fa-solid fa-user-plus font-bold"></i> <span>Create VIP Account</span>
+          <button id="openResellersBtn" title="Manage Resellers & Agents" class="px-3 py-2 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 rounded-xl text-xs font-semibold text-purple-300 transition-all flex items-center gap-1.5">
+            <i class="fa-solid fa-users-gear"></i> <span class="hidden sm:inline">Resellers</span>
+          </button>
+          <button id="backupBtn" title="Export License Database" class="px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-semibold text-slate-300 transition-all flex items-center gap-1.5">
+            <i class="fa-solid fa-download"></i> <span class="hidden sm:inline">Backup</span>
+          </button>
+          <button id="newKeyModalBtn" class="px-3.5 py-2 bg-cyberCyan hover:bg-cyan-300 text-black font-extrabold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-lg shadow-cyan-500/20">
+            <i class="fa-solid fa-user-plus font-bold"></i> <span>Add VIP</span>
           </button>
           <button id="logoutBtn" class="p-2.5 bg-red-500/10 hover:bg-red-500/20 text-cyberCrimson border border-red-500/20 rounded-xl text-xs transition-all" title="Logout">
             <i class="fa-solid fa-arrow-right-from-bracket"></i>
@@ -570,6 +576,122 @@
           ⚡ Create VIP Account Now
         </button>
       </form>
+    </div>
+  </div>
+
+  <!-- ==================== 5. SUPABASE SETUP MODAL ==================== -->
+  <div id="sqlModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+    <div class="glass-panel p-6 sm:p-8 rounded-3xl max-w-2xl w-full border border-emerald-500/30 relative animate-scale-up">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-database"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-black uppercase text-white">Supabase Setup Guide</h3>
+            <p class="text-xs text-slate-400 font-mono">1-Click Persistent Cloud Storage</p>
+          </div>
+        </div>
+        <button id="closeSqlModalBtn" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="space-y-4 text-xs text-slate-300">
+        <p>Sundin ang 3 simpleng hakbang para maging <b>100% permanente</b> ang VIP accounts mo sa Supabase PostgreSQL:</p>
+        
+        <ol class="list-decimal pl-4 space-y-2 text-slate-300 font-mono text-[11px]">
+          <li>Buksan ang iyong libreng <a href="https://supabase.com/dashboard" target="_blank" class="text-cyberCyan underline">Supabase Dashboard</a> & pumunta sa <b>SQL Editor</b>.</li>
+          <li>I-paste ang SQL schema code sa ibaba at i-click ang <b>Run (Execute)</b>.</li>
+          <li>Pumunta sa iyong <b>Vercel Project Settings > Environment Variables</b> at idagdag ang:
+            <div class="p-2 bg-black/60 rounded-lg mt-1 text-cyberGold">
+              <code>SUPABASE_URL = https://your-project.supabase.co</code><br>
+              <code>SUPABASE_KEY = your-service-role-or-anon-key</code>
+            </div>
+          </li>
+        </ol>
+
+        <div class="relative">
+          <pre class="bg-black/80 p-3.5 rounded-xl border border-white/10 text-[10px] text-slate-400 font-mono max-h-48 overflow-y-auto" id="sqlSchemaCode">CREATE TABLE IF NOT EXISTS vip_accounts (
+  id TEXT PRIMARY KEY,
+  username TEXT UNIQUE NOT NULL,
+  password TEXT NOT NULL,
+  duration_days INT DEFAULT 30,
+  duration_hours INT DEFAULT 720,
+  status TEXT DEFAULT 'active',
+  hwid TEXT,
+  notes TEXT,
+  reseller_id TEXT,
+  created_at BIGINT,
+  activated_at BIGINT,
+  expires_at BIGINT,
+  last_heartbeat BIGINT
+);
+
+CREATE TABLE IF NOT EXISTS vip_resellers (
+  id TEXT PRIMARY KEY,
+  username TEXT UNIQUE NOT NULL,
+  password TEXT NOT NULL,
+  credits INT DEFAULT 10,
+  notes TEXT,
+  created_at BIGINT
+);
+
+ALTER TABLE vip_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vip_resellers ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow server access to vip_accounts" ON vip_accounts FOR ALL USING (true);
+CREATE POLICY "Allow server access to vip_resellers" ON vip_resellers FOR ALL USING (true);</pre>
+          <button id="copySqlCodeBtn" class="absolute top-2 right-2 px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 rounded-lg text-[10px] font-bold font-mono transition-all">
+            <i class="fa-solid fa-copy"></i> Copy SQL
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 6. RESELLER & AGENTS MODAL ==================== -->
+  <div id="resellerModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+    <div class="glass-panel p-6 sm:p-8 rounded-3xl max-w-2xl w-full border border-purple-500/30 relative animate-scale-up space-y-5">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-300 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-users-gear"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-black uppercase text-white">Reseller & Sub-Agent Center</h3>
+            <p class="text-xs text-slate-400 font-mono">Manage Agents, Credits & Sales</p>
+          </div>
+        </div>
+        <button id="closeResellerModalBtn" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- Add Reseller Form -->
+      <form id="createResellerForm" class="p-4 bg-black/40 border border-white/10 rounded-2xl space-y-3">
+        <div class="text-xs font-bold uppercase text-purple-300">Add New Reseller</div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <input type="text" id="resellerUserInput" required placeholder="Agent Username..." class="px-3 py-2 bg-black/50 border border-white/10 rounded-xl text-xs text-white">
+          <input type="text" id="resellerPassInput" required placeholder="Agent Password..." class="px-3 py-2 bg-black/50 border border-white/10 rounded-xl text-xs text-white">
+          <input type="number" id="resellerCreditsInput" required value="20" placeholder="Credits (Keys)..." class="px-3 py-2 bg-black/50 border border-white/10 rounded-xl text-xs text-white">
+        </div>
+        <button type="submit" class="w-full py-2 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-400 hover:to-indigo-500 text-white font-extrabold uppercase tracking-wider text-xs rounded-xl transition-all">
+          Register Reseller
+        </button>
+      </form>
+
+      <!-- Reseller List Table -->
+      <div class="border border-white/10 rounded-2xl overflow-hidden max-h-60 overflow-y-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-white/5 text-slate-400 font-mono text-[10px] uppercase">
+            <tr>
+              <th class="p-3">Agent</th>
+              <th class="p-3">Credits</th>
+              <th class="p-3">Created</th>
+              <th class="p-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="resellerTableBody" class="divide-y divide-white/5 text-slate-300 font-mono text-[11px]">
+            <tr><td colspan="4" class="p-4 text-center text-slate-500">Loading resellers...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 

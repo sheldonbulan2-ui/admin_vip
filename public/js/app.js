@@ -309,11 +309,26 @@ async function loadDashboardData() {
 
     if (data.success) {
       loadedAccounts = data.accounts || [];
+      window.loadedResellers = data.resellers || [];
       statTotal.textContent = data.stats.total;
       statActive.textContent = data.stats.active;
       statExpired.textContent = data.stats.expired;
       statBound.textContent = data.stats.boundDevices;
+
+      const badge = document.getElementById('dbStatusBadge');
+      if (badge) {
+        if (data.isSupabase) {
+          badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1';
+          badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> 🟢 Supabase DB Connected';
+        } else {
+          badge.className = 'px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1 cursor-pointer';
+          badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span> 🟡 Local Cache (Click to Connect DB)';
+          badge.onclick = () => document.getElementById('sqlModal').classList.remove('hidden');
+        }
+      }
+
       renderAccountsTable();
+      renderResellerTable();
     }
   } catch (err) {
     showToast('Failed to load accounts data', 'error');
@@ -515,31 +530,107 @@ function copyToClipboard(text) {
   showToast(`Copied: ${text}`, 'info');
 }
 
-function showToast(message, type = 'info') {
-  const container = document.getElementById('toastContainer');
-  const toast = document.createElement('div');
-
-  const bg = type === 'success' ? 'border-green-500/40 bg-green-950/80 text-green-300' :
-             type === 'error' ? 'border-red-500/40 bg-red-950/80 text-red-300' :
-             'border-cyan-500/40 bg-cyan-950/80 text-cyan-300';
-
-  const icon = type === 'success' ? 'fa-circle-check text-green-400' :
-               type === 'error' ? 'fa-triangle-exclamation text-red-400' :
-               'fa-circle-info text-cyan-400';
-
-  toast.className = `p-3.5 rounded-2xl border ${bg} backdrop-blur-md shadow-2xl flex items-center gap-3 text-xs font-mono max-w-sm pointer-events-auto transition-all transform translate-y-2 opacity-0`;
-  toast.innerHTML = `
-    <i class="fa-solid ${icon} text-base"></i>
-    <span class="truncate">${message}</span>
-  `;
-
-  container.appendChild(toast);
-  requestAnimationFrame(() => {
-    toast.classList.remove('translate-y-2', 'opacity-0');
-  });
-
-  setTimeout(() => {
-    toast.classList.add('opacity-0', 'translate-x-full');
-    setTimeout(() => toast.remove(), 300);
-  }, 3500);
+function renderResellerTable() {
+  const tbody = document.getElementById('resellerTableBody');
+  if (!tbody) return;
+  const list = window.loadedResellers || [];
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-slate-500 font-mono">No resellers registered yet.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(r => `
+    <tr class="hover:bg-white/5 transition-colors">
+      <td class="p-3 font-bold text-white">${r.username}</td>
+      <td class="p-3"><span class="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold">${r.credits || 0} Credits</span></td>
+      <td class="p-3 text-[10px] text-slate-400">${new Date(r.createdAt || Date.now()).toLocaleDateString()}</td>
+      <td class="p-3 text-right">
+        <button onclick="addResellerCredits('${r.id}')" class="px-2 py-1 bg-white/10 hover:bg-purple-500/30 text-purple-200 rounded text-[10px] font-bold">
+          + Add Credits
+        </button>
+      </td>
+    </tr>
+  `).join('');
 }
+
+async function addResellerCredits(resellerId) {
+  const amount = prompt("Enter credits to add to reseller:", "10");
+  if (!amount || isNaN(amount)) return;
+  try {
+    const res = await fetch('/api/keys', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentAdminToken}`
+      },
+      body: JSON.stringify({ action: 'add_reseller_credits', resellerId, credits: parseInt(amount) })
+    });
+    const d = await res.json();
+    if (d.success) {
+      showToast(d.message, 'success');
+      loadDashboardData();
+    } else {
+      showToast(d.message, 'error');
+    }
+  } catch (e) {
+    showToast('Failed to add credits', 'error');
+  }
+}
+
+// Wire up Supabase SQL Modal & Reseller Modal
+document.addEventListener('DOMContentLoaded', () => {
+  const openSqlBtn = document.getElementById('openSqlModalBtn');
+  const closeSqlBtn = document.getElementById('closeSqlModalBtn');
+  const sqlModal = document.getElementById('sqlModal');
+  const copySqlBtn = document.getElementById('copySqlCodeBtn');
+
+  if (openSqlBtn && sqlModal) {
+    openSqlBtn.addEventListener('click', () => sqlModal.classList.remove('hidden'));
+    closeSqlBtn.addEventListener('click', () => sqlModal.classList.add('hidden'));
+    copySqlBtn.addEventListener('click', () => {
+      const code = document.getElementById('sqlSchemaCode').textContent;
+      navigator.clipboard.writeText(code);
+      showToast('Supabase SQL Schema copied to clipboard!', 'success');
+    });
+  }
+
+  const openResellerBtn = document.getElementById('openResellersBtn');
+  const closeResellerBtn = document.getElementById('closeResellerModalBtn');
+  const resellerModal = document.getElementById('resellerModal');
+  const createResellerForm = document.getElementById('createResellerForm');
+
+  if (openResellerBtn && resellerModal) {
+    openResellerBtn.addEventListener('click', () => {
+      resellerModal.classList.remove('hidden');
+      renderResellerTable();
+    });
+    closeResellerBtn.addEventListener('click', () => resellerModal.classList.add('hidden'));
+
+    createResellerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('resellerUserInput').value.trim();
+      const password = document.getElementById('resellerPassInput').value.trim();
+      const credits = document.getElementById('resellerCreditsInput').value;
+
+      try {
+        const res = await fetch('/api/keys', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentAdminToken}`
+          },
+          body: JSON.stringify({ action: 'create_reseller', username, password, credits })
+        });
+        const d = await res.json();
+        if (d.success) {
+          showToast(d.message, 'success');
+          createResellerForm.reset();
+          loadDashboardData();
+        } else {
+          showToast(d.message, 'error');
+        }
+      } catch (err) {
+        showToast('Failed to create reseller', 'error');
+      }
+    });
+  }
+});

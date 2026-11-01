@@ -1,5 +1,13 @@
 const crypto = require('crypto');
-const { DEFAULT_ADMIN_KEY, loadKeys, saveKeys } = require('../lib/db');
+const { 
+  DEFAULT_ADMIN_KEY, 
+  loadAccountsAsync, 
+  saveAccountAsync, 
+  deleteAccountAsync,
+  loadResellersAsync,
+  saveResellerAsync,
+  isSupabaseConfigured 
+} = require('../lib/db');
 
 function verifyAdminAuth(req) {
   const authHeader = req.headers['authorization'] || '';
@@ -16,7 +24,7 @@ function verifyAdminAuth(req) {
   return false;
 }
 
-module.exports = (req, res) => {
+module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -33,18 +41,19 @@ module.exports = (req, res) => {
     });
   }
 
-  const accounts = loadKeys();
+  const accounts = await loadAccountsAsync();
+  const resellers = await loadResellersAsync();
   const now = Date.now();
 
   // Auto-check and update expired status
-  accounts.forEach(a => {
+  for (const a of accounts) {
     if (a.status === 'active' && a.expiresAt && now > a.expiresAt) {
       a.status = 'expired';
+      await saveAccountAsync(a);
     }
-  });
-  saveKeys(accounts);
+  }
 
-  // 1. GET: List all accounts & system metrics
+  // 1. GET: List all accounts, resellers & system metrics
   if (req.method === 'GET') {
     const total = accounts.length;
     const active = accounts.filter(a => a.status === 'active').length;
@@ -54,7 +63,9 @@ module.exports = (req, res) => {
 
     return res.status(200).json({
       success: true,
-      stats: { total, active, expired, revoked, boundDevices },
+      isSupabase: isSupabaseConfigured(),
+      stats: { total, active, expired, revoked, boundDevices, resellersCount: resellers.length },
+      resellers: resellers,
       accounts: accounts.map(a => ({
         ...a,
         remainingSeconds: a.expiresAt ? Math.max(0, Math.floor((a.expiresAt - now) / 1000)) : null
@@ -62,125 +73,137 @@ module.exports = (req, res) => {
     });
   }
 
-  // 2. POST: Create VIP Account (Username, Password, Duration)
-  if (req.method === 'POST') {
-    const { username, password, durationDays, durationHours, notes } = req.body || {};
+  // Parse body
+  const body = req.body || {};
+  const action = body.action || '';
 
-    if (!username || !username.trim()) {
-      return res.status(400).json({ success: false, message: 'Username is required!' });
+  // 2. RESELLER ACTIONS
+  if (action === 'create_reseller') {
+    const { username, password, credits, notes } = body;
+    if (!username || !password) {
+      return res.status(400).json({ success: false, message: 'Reseller username and password required' });
     }
-    if (!password || !password.trim()) {
-      return res.status(400).json({ success: false, message: 'Password is required!' });
+    const cleanUser = username.trim().toLowerCase();
+    if (resellers.some(r => r.username.toLowerCase() === cleanUser)) {
+      return res.status(400).json({ success: false, message: 'Reseller username already exists!' });
+    }
+    const newReseller = {
+      id: 'res_' + crypto.randomBytes(4).toString('hex'),
+      username: cleanUser,
+      password: password.trim(),
+      credits: parseInt(credits) || 10,
+      notes: (notes || 'Official Reseller').trim(),
+      createdAt: now
+    };
+    await saveResellerAsync(newReseller);
+    return res.status(200).json({ success: true, message: `Reseller ${cleanUser} created with ${newReseller.credits} credits!`, reseller: newReseller });
+  }
+
+  if (action === 'add_reseller_credits') {
+    const { resellerId, credits } = body;
+    const target = resellers.find(r => r.id === resellerId);
+    if (!target) return res.status(404).json({ success: false, message: 'Reseller not found' });
+    target.credits = (target.credits || 0) + (parseInt(credits) || 10);
+    await saveResellerAsync(target);
+    return res.status(200).json({ success: true, message: `Added credits! New balance: ${target.credits}`, reseller: target });
+  }
+
+  // 3. ACCOUNT ACTIONS: CREATE VIP ACCOUNT
+  if (action === 'create_account' || (!action && req.method === 'POST')) {
+    const { username, password, durationDays, durationHours, notes, resellerId } = body;
+
+    if (!username || !password) {
+      return res.status(400).json({ success: false, message: 'Username and Password are required' });
     }
 
-    const cleanUsername = username.trim();
+    const cleanUsername = username.trim().toLowerCase();
     const cleanPassword = password.trim();
 
-    // Check duplicate username
-    if (accounts.some(a => a.username.toLowerCase() === cleanUsername.toLowerCase())) {
-      return res.status(400).json({ success: false, message: 'Username already exists! Gumamit ng ibang username.' });
+    if (accounts.some(a => a.username && a.username.toLowerCase() === cleanUsername)) {
+      return res.status(400).json({ success: false, message: `Username "${cleanUsername}" is already taken!` });
     }
 
-    let days = parseFloat(durationDays) || 0;
-    let hours = parseFloat(durationHours) || (days * 24);
-
-    if (hours <= 0) {
-      hours = 24; // Default to 24 hours / 1 day
-      days = 1;
-    }
+    const dDays = parseInt(durationDays) || 30;
+    const dHours = parseInt(durationHours) || (dDays * 24);
 
     const newAccount = {
-      id: 'acc_' + crypto.randomBytes(8).toString('hex'),
+      id: 'acc_' + crypto.randomBytes(6).toString('hex'),
       username: cleanUsername,
       password: cleanPassword,
-      durationDays: days,
-      durationHours: hours,
+      durationDays: dDays,
+      durationHours: dHours,
       status: 'active',
       hwid: null,
-      notes: notes || 'VIP Account',
+      notes: (notes || 'Created via Admin Panel').trim(),
+      resellerId: resellerId || null,
       createdAt: now,
       activatedAt: null,
-      expiresAt: null
+      expiresAt: null,
+      lastHeartbeat: null
     };
 
-    accounts.unshift(newAccount);
-    saveKeys(accounts);
-
+    await saveAccountAsync(newAccount);
     return res.status(201).json({
       success: true,
-      message: `Successfully created VIP account: ${cleanUsername}`,
+      message: `VIP Account "${cleanUsername}" created successfully!`,
       account: newAccount
     });
   }
 
-  // 3. PUT: Manage Account (Reset HWID, Extend, Revoke, Activate)
-  if (req.method === 'PUT') {
-    const { id, action, addDays } = req.body || {};
-    const acc = accounts.find(a => a.id === id);
+  // 4. RESET HWID (DEVICE UNLOCK)
+  if (action === 'reset_hwid') {
+    const { accountId } = body;
+    const acc = accounts.find(a => a.id === accountId);
+    if (!acc) return res.status(404).json({ success: false, message: 'Account not found' });
 
-    if (!acc) {
-      return res.status(404).json({ success: false, message: 'Account not found' });
-    }
-
-    if (action === 'reset_hwid') {
-      acc.hwid = null;
-      saveKeys(accounts);
-      return res.status(200).json({ success: true, message: `HWID reset for ${acc.username}. Maaari nang gamitin sa bagong device.` });
-    }
-
-    if (action === 'revoke') {
-      acc.status = 'revoked';
-      saveKeys(accounts);
-      return res.status(200).json({ success: true, message: `Account ${acc.username} has been REVOKED.` });
-    }
-
-    if (action === 'activate') {
-      acc.status = 'active';
-      saveKeys(accounts);
-      return res.status(200).json({ success: true, message: `Account ${acc.username} set to ACTIVE.` });
-    }
-
-    if (action === 'extend') {
-      const daysToAdd = parseFloat(addDays) || 1;
-      const msToAdd = daysToAdd * 24 * 3600 * 1000;
-      acc.durationDays += daysToAdd;
-      acc.durationHours += daysToAdd * 24;
-
-      if (acc.expiresAt && acc.expiresAt > now) {
-        acc.expiresAt += msToAdd;
-      } else {
-        acc.expiresAt = now + msToAdd;
-      }
-      acc.status = 'active';
-      saveKeys(accounts);
-
-      return res.status(200).json({
-        success: true,
-        message: `Extended ${acc.username} by ${daysToAdd} days`,
-        account: acc
-      });
-    }
-
-    return res.status(400).json({ success: false, message: 'Invalid action' });
+    acc.hwid = null;
+    await saveAccountAsync(acc);
+    return res.status(200).json({ success: true, message: `HWID reset for "${acc.username}". It can now bind to a new device!` });
   }
 
-  // 4. DELETE: Delete Account
-  if (req.method === 'DELETE') {
-    const id = req.query.id || req.body?.id;
-    const index = accounts.findIndex(a => a.id === id);
+  // 5. EXTEND DURATION
+  if (action === 'extend_duration') {
+    const { accountId, addDays, addHours } = body;
+    const acc = accounts.find(a => a.id === accountId);
+    if (!acc) return res.status(404).json({ success: false, message: 'Account not found' });
 
-    if (index === -1) {
-      return res.status(404).json({ success: false, message: 'Account not found' });
+    const hoursToAdd = (parseInt(addHours) || 0) + ((parseInt(addDays) || 0) * 24);
+    if (hoursToAdd <= 0) return res.status(400).json({ success: false, message: 'Specify positive days or hours to extend' });
+
+    if (acc.expiresAt && acc.expiresAt > now) {
+      acc.expiresAt += (hoursToAdd * 3600 * 1000);
+    } else {
+      acc.activatedAt = now;
+      acc.expiresAt = now + (hoursToAdd * 3600 * 1000);
     }
 
-    const removed = accounts.splice(index, 1);
-    saveKeys(accounts);
+    acc.status = 'active';
+    acc.durationHours = (acc.durationHours || 0) + hoursToAdd;
+    acc.durationDays = Math.ceil(acc.durationHours / 24);
 
-    return res.status(200).json({
-      success: true,
-      message: `Account ${removed[0].username} deleted successfully`
-    });
+    await saveAccountAsync(acc);
+    return res.status(200).json({ success: true, message: `Extended account "${acc.username}" by ${hoursToAdd} hours!` });
   }
 
-  return res.status(405).json({ message: 'Method not allowed' });
+  // 6. TOGGLE BAN / REVOKE
+  if (action === 'toggle_revoke') {
+    const { accountId } = body;
+    const acc = accounts.find(a => a.id === accountId);
+    if (!acc) return res.status(404).json({ success: false, message: 'Account not found' });
+
+    acc.status = (acc.status === 'revoked') ? 'active' : 'revoked';
+    await saveAccountAsync(acc);
+    return res.status(200).json({ success: true, message: `Account "${acc.username}" status updated to: ${acc.status}` });
+  }
+
+  // 7. DELETE ACCOUNT
+  if (action === 'delete_account' || req.method === 'DELETE') {
+    const accountId = body.accountId || req.query.id;
+    if (!accountId) return res.status(400).json({ success: false, message: 'Account ID required' });
+
+    await deleteAccountAsync(accountId);
+    return res.status(200).json({ success: true, message: 'VIP account deleted permanently!' });
+  }
+
+  return res.status(400).json({ success: false, message: 'Invalid action or request method' });
 };
