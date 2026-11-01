@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NINJA VIP • Cloud License & Admin Security Center</title>
+  <title>NINJA VIP AIM ASSIST • 8 Ball Pool GodMode & Cloud License Center</title>
+  <meta name="description" content="Download the ultimate 8 Ball Pool VIP Aim Assist with 4-Cushion GodMode Bank Lines, Hands-Free Auto-Aim, Anti-Ban Protection, and Universal Version Support.">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/css/style.css">
@@ -27,60 +28,271 @@
 </head>
 <body class="bg-cyberDark min-h-screen text-slate-100 flex flex-col justify-between selection:bg-cyan-500 selection:text-black">
 
-  <!-- ==================== 1. ADMIN LOGIN GATE (SCREEN 1) ==================== -->
-  <div id="loginSection" class="min-h-screen flex items-center justify-center p-4">
-    <div class="relative w-full max-w-md">
-      <!-- Ambient Glow Behind Card -->
-      <div class="absolute -top-12 -left-12 w-48 h-48 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none"></div>
-      <div class="absolute -bottom-12 -right-12 w-48 h-48 bg-purple-500/15 rounded-full blur-3xl pointer-events-none"></div>
-
-      <div id="loginCard" class="glass-panel p-8 rounded-3xl relative z-10 shadow-2xl border border-white/10">
-        <div class="text-center mb-8">
-          <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyan-500/20 to-purple-500/20 border border-cyan-400/30 mb-4 pulse-glow">
-            <i class="fa-solid fa-shield-halved text-2xl text-cyberCyan"></i>
+  <!-- ==================== 1. PUBLIC VIP LANDING PAGE (DEFAULT VIEW) ==================== -->
+  <div id="landingSection" class="min-h-screen flex flex-col justify-between">
+    
+    <!-- Navbar -->
+    <header class="glass-panel border-b border-white/10 sticky top-0 z-40 px-6 py-4">
+      <div class="max-w-7xl mx-auto flex items-center justify-between">
+        <!-- Logo -->
+        <a href="/" class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-400 to-purple-600 flex items-center justify-center font-black text-black shadow-lg shadow-cyan-500/25">
+            ⚡
           </div>
-          <h1 class="text-2xl font-black tracking-tight text-white uppercase">Ninja VIP Control</h1>
-          <p class="text-xs text-slate-400 mt-1 uppercase tracking-widest font-mono">Master Security License Gate</p>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-base font-extrabold tracking-tight text-white uppercase">Ninja VIP Engine</span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/10 text-cyberCyan border border-cyan-500/20 font-mono">v2.4.0</span>
+            </div>
+            <p class="text-[11px] text-slate-400 font-mono hidden sm:block">Universal 8 Ball Pool Aim Assist</p>
+          </div>
+        </a>
+
+        <!-- Nav Actions -->
+        <div class="flex items-center gap-3 sm:gap-4">
+          <a href="#features" class="hidden md:inline text-xs font-semibold text-slate-300 hover:text-white transition-colors">Features</a>
+          <a href="#guide" class="hidden md:inline text-xs font-semibold text-slate-300 hover:text-white transition-colors">How to Use</a>
+          
+          <a href="/Ninja-crack.apk" download class="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-cyan-500/20 flex items-center gap-2">
+            <i class="fa-solid fa-download"></i> <span>Download APK</span>
+          </a>
+
+          <!-- Discreet Admin Portal Button -->
+          <button id="openAdminLoginBtn" class="px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-semibold text-slate-300 hover:text-cyberCyan transition-all flex items-center gap-1.5" title="Admin Security Login">
+            <i class="fa-solid fa-lock text-[11px]"></i> <span class="hidden sm:inline">Admin Portal</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="relative pt-16 pb-20 px-4 sm:px-6 overflow-hidden">
+      <!-- Ambient Cyber Glows -->
+      <div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-gradient-to-tr from-cyan-500/15 via-purple-500/15 to-transparent rounded-full blur-3xl pointer-events-none"></div>
+
+      <div class="max-w-5xl mx-auto text-center relative z-10 space-y-6">
+        <!-- VIP Release Badge -->
+        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md text-xs font-semibold text-slate-300">
+          <span class="w-2 h-2 rounded-full bg-cyberGreen animate-ping"></span>
+          <span class="text-cyberCyan font-mono">MODE B ACTIVE</span> • Compatible with All 8BP Versions (v55+, v56+)
         </div>
 
-        <div id="loginAlert" class="hidden mb-6 p-4 rounded-xl text-xs font-semibold flex items-center gap-3">
+        <!-- Main Headline -->
+        <h1 class="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white uppercase leading-none">
+          Dominate 8 Ball Pool <br>
+          <span class="bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">With GodMode AI</span>
+        </h1>
+
+        <!-- Subtitle -->
+        <p class="text-sm sm:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
+          The ultimate undetected aim assist engine. Features full <b>4-cushion bank predictions</b>, <b>hands-free tako auto-aim</b>, and organic humanized anti-ban evasion. Direct system overlay — zero virtual container freezes.
+        </p>
+
+        <!-- Big Download CTA Button -->
+        <div class="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <a href="/Ninja-crack.apk" download
+             class="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-black font-extrabold text-sm uppercase tracking-wider rounded-2xl transition-all shadow-xl shadow-cyan-500/30 active:scale-[0.98] flex items-center justify-center gap-3 group">
+            <i class="fa-solid fa-download text-lg group-hover:-translate-y-0.5 transition-transform"></i>
+            <span>DOWNLOAD VIP APK (v2.4.0)</span>
+          </a>
+
+          <a href="#guide"
+             class="w-full sm:w-auto px-7 py-4 glass-panel hover:bg-white/10 text-white font-bold text-sm uppercase tracking-wider rounded-2xl transition-all border border-white/10 flex items-center justify-center gap-2">
+            <i class="fa-solid fa-circle-question text-cyan-400"></i>
+            <span>How to Activate</span>
+          </a>
+        </div>
+
+        <!-- Quick Spec Badges -->
+        <div class="pt-6 flex flex-wrap items-center justify-center gap-4 sm:gap-8 text-xs font-mono text-slate-400">
+          <div class="flex items-center gap-1.5">
+            <i class="fa-brands fa-android text-cyberGreen"></i> Android 8.0 - 15+
+          </div>
+          <div class="flex items-center gap-1.5">
+            <i class="fa-solid fa-file-shield text-cyberCyan"></i> 20.7 MB Direct File
+          </div>
+          <div class="flex items-center gap-1.5">
+            <i class="fa-solid fa-shield-virus text-cyberGold"></i> 100% Anti-Ban Guard
+          </div>
+          <div class="flex items-center gap-1.5">
+            <i class="fa-solid fa-check text-purple-400"></i> No Root Required
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="max-w-7xl mx-auto px-4 sm:px-6 py-16 space-y-12">
+      <div class="text-center space-y-2">
+        <h2 class="text-xs font-mono uppercase tracking-widest text-cyberCyan">Unmatched Capabilities</h2>
+        <h3 class="text-2xl sm:text-3xl font-extrabold text-white uppercase tracking-tight">Built For Guaranteed Victories</h3>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        
+        <!-- Feature 1 -->
+        <div class="glass-panel p-6 rounded-3xl border border-white/10 hover:border-cyan-400/30 transition-all group">
+          <div class="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyberCyan text-xl mb-4 group-hover:scale-110 transition-transform">
+            ⚡
+          </div>
+          <h4 class="text-base font-extrabold text-white mb-2 uppercase">4-Cushion GodMode</h4>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Multi-rail bank shot calculations up to 4 cushion bounces with dynamic table-edge reflection and pocket magnetism.
+          </p>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="glass-panel p-6 rounded-3xl border border-white/10 hover:border-green-400/30 transition-all group">
+          <div class="w-12 h-12 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center text-cyberGreen text-xl mb-4 group-hover:scale-110 transition-transform">
+            🎯
+          </div>
+          <h4 class="text-base font-extrabold text-white mb-2 uppercase">Hands-Free Tako</h4>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Automatic cue rotation and ghost-ball positioning. Hindi na kailangan galawin ang tako — auto-aligns directly to the pocket.
+          </p>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="glass-panel p-6 rounded-3xl border border-white/10 hover:border-gold-400/30 transition-all group">
+          <div class="w-12 h-12 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-cyberGold text-xl mb-4 group-hover:scale-110 transition-transform">
+            🛡️
+          </div>
+          <h4 class="text-base font-extrabold text-white mb-2 uppercase">Anti-Ban Humanizer</h4>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Evades server-side heuristics using micro-jitter and randomized realistic human deliberation delays (300ms - 500ms).
+          </p>
+        </div>
+
+        <!-- Feature 4 -->
+        <div class="glass-panel p-6 rounded-3xl border border-white/10 hover:border-purple-400/30 transition-all group">
+          <div class="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-cyberPurple text-xl mb-4 group-hover:scale-110 transition-transform">
+            📱
+          </div>
+          <h4 class="text-base font-extrabold text-white mb-2 uppercase">Mode B All Versions</h4>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Direct floating overlay that sits over official Miniclip 8BP or modded APKs. Zero sandbox loading or "Preparing" freezes.
+          </p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- How to Use 3-Step Guide -->
+    <section id="guide" class="max-w-4xl mx-auto px-4 sm:px-6 py-16 space-y-10">
+      <div class="text-center space-y-2">
+        <h2 class="text-xs font-mono uppercase tracking-widest text-cyberCyan">Easy 3-Step Setup</h2>
+        <h3 class="text-2xl sm:text-3xl font-extrabold text-white uppercase tracking-tight">How to Get Started</h3>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="glass-panel p-6 rounded-3xl border border-white/10 relative">
+          <span class="text-3xl font-black text-cyan-500/30 font-mono absolute top-4 right-4">01</span>
+          <h4 class="text-sm font-extrabold text-white uppercase mb-2">1. Download & Install</h4>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            I-download ang <code class="text-cyan-400">Ninja-crack.apk</code> at i-install sa iyong Android phone. I-enable ang "Draw Over Apps" permission.
+          </p>
+        </div>
+
+        <div class="glass-panel p-6 rounded-3xl border border-white/10 relative">
+          <span class="text-3xl font-black text-cyan-500/30 font-mono absolute top-4 right-4">02</span>
+          <h4 class="text-sm font-extrabold text-white uppercase mb-2">2. Get VIP Key</h4>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Humingi ng lisensya (1 Day, 7 Days, o 30 Days) mula sa Admin. Ilagay ang VIP Key sa activation screen.
+          </p>
+        </div>
+
+        <div class="glass-panel p-6 rounded-3xl border border-white/10 relative">
+          <span class="text-3xl font-black text-cyan-500/30 font-mono absolute top-4 right-4">03</span>
+          <h4 class="text-sm font-extrabold text-white uppercase mb-2">3. Launch 8BP & Win</h4>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Pindutin ang "Launch 8 Ball Pool (Mode B)". Lalabas ang neon floating lines at mag-enjoy sa 100% accurate win streak!
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bottom Download CTA -->
+    <section class="max-w-5xl mx-auto px-4 sm:px-6 py-12">
+      <div class="glass-panel p-8 sm:p-12 rounded-3xl border border-cyan-500/30 text-center relative overflow-hidden bg-gradient-to-b from-cyan-500/5 to-transparent">
+        <h3 class="text-2xl sm:text-4xl font-black text-white uppercase tracking-tight mb-3">Ready to Rule the 8BP Tables?</h3>
+        <p class="text-xs sm:text-sm text-slate-400 max-w-xl mx-auto mb-6">
+          Download the verified Ninja VIP Aim Assist APK directly from our high-speed Vercel cloud server.
+        </p>
+        <a href="/Ninja-crack.apk" download
+           class="inline-flex items-center gap-3 px-8 py-4 bg-cyberCyan hover:bg-cyan-300 text-black font-extrabold text-sm uppercase tracking-wider rounded-2xl transition-all shadow-xl shadow-cyan-500/30 active:scale-[0.98]">
+          <i class="fa-solid fa-download"></i>
+          <span>Direct Download (Ninja-crack.apk)</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- Public Footer -->
+    <footer class="glass-panel border-t border-white/10 py-6 px-6 text-center text-xs text-slate-500">
+      <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+        <span>Ninja VIP Engine © 2026 • 8 Ball Pool Aim Assist</span>
+        <div class="flex items-center gap-4">
+          <a href="/Ninja-crack.apk" download class="text-slate-400 hover:text-white transition-colors">Download APK</a>
+          <button id="openAdminLoginBtnFooter" class="text-slate-400 hover:text-cyberCyan transition-colors">Admin Portal</button>
+        </div>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- ==================== 2. ADMIN LOGIN MODAL (SECURITY GATE) ==================== -->
+  <div id="adminLoginModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+    <div class="relative w-full max-w-md">
+      <div id="loginCard" class="glass-panel p-8 rounded-3xl relative z-10 shadow-2xl border border-white/15 animate-scale-up">
+        
+        <div class="flex justify-end">
+          <button id="closeAdminLoginBtn" class="text-slate-400 hover:text-white text-lg">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div class="text-center mb-6">
+          <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-cyan-500/20 to-purple-500/20 border border-cyan-400/30 mb-3 pulse-glow">
+            <i class="fa-solid fa-shield-halved text-2xl text-cyberCyan"></i>
+          </div>
+          <h2 class="text-xl font-black tracking-tight text-white uppercase">Ninja VIP Control</h2>
+          <p class="text-xs text-slate-400 mt-0.5 uppercase tracking-widest font-mono">Master Security License Gate</p>
+        </div>
+
+        <div id="loginAlert" class="hidden mb-5 p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2.5">
           <i class="fa-solid fa-triangle-exclamation text-base"></i>
           <span id="loginAlertMsg">Invalid Key</span>
         </div>
 
-        <form id="loginForm" class="space-y-5">
+        <form id="loginForm" class="space-y-4">
           <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">Master Admin Key</label>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">Master Admin Key</label>
             <div class="relative">
               <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                <i class="fa-solid fa-key"></i>
+                <i class="fa-solid fa-key text-xs"></i>
               </span>
               <input type="password" id="adminKeyInput" required placeholder="Enter Secret Admin Key..."
-                     class="w-full pl-10 pr-12 py-3 bg-black/40 border border-white/10 rounded-xl text-sm font-mono focus:outline-none focus:border-cyberCyan focus:ring-1 focus:ring-cyberCyan transition-all text-white placeholder-slate-600">
+                     class="w-full pl-9 pr-12 py-3 bg-black/40 border border-white/10 rounded-xl text-xs font-mono focus:outline-none focus:border-cyberCyan focus:ring-1 focus:ring-cyberCyan transition-all text-white placeholder-slate-600">
               <button type="button" id="toggleKeyVisibility" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 hover:text-slate-300">
-                <i class="fa-regular fa-eye"></i>
+                <i class="fa-regular fa-eye text-xs"></i>
               </button>
             </div>
-            <p class="text-[11px] text-slate-500 mt-2 font-mono flex items-center gap-1.5">
-              <i class="fa-solid fa-lock text-[10px] text-cyan-400"></i> Default: <code class="text-cyan-400">NINJA-ADMIN-SECRET-2026</code>
+            <p class="text-[10px] text-slate-500 mt-2 font-mono flex items-center gap-1.5">
+              <i class="fa-solid fa-lock text-[9px] text-cyan-400"></i> Default: <code class="text-cyan-400">NINJA-ADMIN-SECRET-2026</code>
             </p>
           </div>
 
           <button type="submit" id="loginBtn"
-                  class="w-full py-3.5 px-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-extrabold text-sm uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-cyan-500/20 active:scale-[0.98] flex items-center justify-center gap-2">
+                  class="w-full py-3 px-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all shadow-lg shadow-cyan-500/20 active:scale-[0.98] flex items-center justify-center gap-2">
             <span>Authenticate Admin</span>
-            <i class="fa-solid fa-arrow-right"></i>
+            <i class="fa-solid fa-arrow-right text-xs"></i>
           </button>
         </form>
 
-        <div class="mt-6 pt-6 border-t border-white/5 text-center">
-          <span class="text-[11px] text-slate-500">Ninja Aim Assist • Universal 8BP Engine v2.4</span>
-        </div>
       </div>
     </div>
   </div>
 
-  <!-- ==================== 2. MASTER VIP DASHBOARD (SCREEN 2) ==================== -->
+  <!-- ==================== 3. MASTER VIP DASHBOARD (SCREEN 3) ==================== -->
   <div id="dashboardSection" class="hidden min-h-screen flex flex-col">
 
     <!-- Top Navigation Bar -->
@@ -203,7 +415,7 @@
             <div class="bg-black/50 p-3.5 rounded-xl border border-white/10 font-mono text-xs flex items-center justify-between mb-3">
               <div class="truncate mr-2">
                 <span class="text-slate-500">POST</span>
-                <span class="text-cyberCyan ml-2" id="apiEndpointUrl">https://&lt;your-vercel-domain&gt;/api/validate</span>
+                <span class="text-cyberCyan ml-2" id="apiEndpointUrl">https://adminvip-nine.vercel.app/api/validate</span>
               </div>
               <button id="copyEndpointBtn" class="text-slate-400 hover:text-white px-2 py-1 text-xs bg-white/5 rounded">
                 <i class="fa-regular fa-copy"></i>
@@ -221,8 +433,8 @@
               <span class="text-cyberGreen font-mono font-bold">ACTIVE (1 Phone)</span>
             </div>
             <div>
-              <span class="text-slate-500 block">Expiry Lockout:</span>
-              <span class="text-cyberCrimson font-mono font-bold">HARD STOP (Kick out)</span>
+              <span class="text-slate-500 block">Direct APK Download:</span>
+              <span class="text-cyberCyan font-mono font-bold">/Ninja-crack.apk</span>
             </div>
           </div>
         </div>
@@ -289,13 +501,13 @@
     <footer class="glass-panel border-t border-white/10 py-4 px-6 text-center text-xs text-slate-500">
       <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
         <span>Ninja Engine © 2026 • 8 Ball Pool VIP Aim Assist</span>
-        <span class="font-mono text-[11px] text-cyan-400">High-Security Vercel Cloud Serverless Edition</span>
+        <button id="returnToLandingBtn" class="font-mono text-[11px] text-cyan-400 hover:underline">← View Public Landing Page</button>
       </div>
     </footer>
 
   </div>
 
-  <!-- ==================== 3. CREATE NEW KEY MODAL ==================== -->
+  <!-- ==================== 4. CREATE NEW KEY MODAL ==================== -->
   <div id="keyModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
     <div class="glass-panel max-w-lg w-full p-6 sm:p-8 rounded-3xl border border-white/20 shadow-2xl relative animate-scale-up">
       <div class="flex items-center justify-between pb-4 border-b border-white/10 mb-6">

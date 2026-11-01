@@ -1,10 +1,17 @@
-// Ninja VIP Admin Dashboard Application Script
+// Ninja VIP Admin Dashboard & Landing Page Script
 let currentAdminToken = sessionStorage.getItem('ninja_admin_token') || '';
 let loadedKeys = [];
 
 // DOM Elements
-const loginSection = document.getElementById('loginSection');
+const landingSection = document.getElementById('landingSection');
+const adminLoginModal = document.getElementById('adminLoginModal');
 const dashboardSection = document.getElementById('dashboardSection');
+
+const openAdminLoginBtn = document.getElementById('openAdminLoginBtn');
+const openAdminLoginBtnFooter = document.getElementById('openAdminLoginBtnFooter');
+const closeAdminLoginBtn = document.getElementById('closeAdminLoginBtn');
+const returnToLandingBtn = document.getElementById('returnToLandingBtn');
+
 const loginForm = document.getElementById('loginForm');
 const adminKeyInput = document.getElementById('adminKeyInput');
 const loginAlert = document.getElementById('loginAlert');
@@ -40,10 +47,11 @@ document.addEventListener('DOMContentLoaded', () => {
     apiEndpointUrl.textContent = `${window.location.origin}/api/validate`;
   }
 
+  // If already authenticated in current session, go straight to dashboard
   if (currentAdminToken) {
     checkTokenAndLoad();
   } else {
-    showLogin();
+    showLanding();
   }
 
   initDurationPills();
@@ -51,13 +59,37 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initEventListeners() {
-  // Toggle password visibility
+  // Open Admin Login Modal
+  if (openAdminLoginBtn) {
+    openAdminLoginBtn.addEventListener('click', () => {
+      adminLoginModal.classList.remove('hidden');
+      adminKeyInput.focus();
+    });
+  }
+  if (openAdminLoginBtnFooter) {
+    openAdminLoginBtnFooter.addEventListener('click', () => {
+      adminLoginModal.classList.remove('hidden');
+      adminKeyInput.focus();
+    });
+  }
+  if (closeAdminLoginBtn) {
+    closeAdminLoginBtn.addEventListener('click', () => {
+      adminLoginModal.classList.add('hidden');
+    });
+  }
+  if (returnToLandingBtn) {
+    returnToLandingBtn.addEventListener('click', () => {
+      showLanding();
+    });
+  }
+
+  // Toggle admin key visibility
   const toggleBtn = document.getElementById('toggleKeyVisibility');
   if (toggleBtn) {
     toggleBtn.addEventListener('click', () => {
       const type = adminKeyInput.getAttribute('type') === 'password' ? 'text' : 'password';
       adminKeyInput.setAttribute('type', type);
-      toggleBtn.innerHTML = type === 'password' ? '<i class="fa-regular fa-eye"></i>' : '<i class="fa-regular fa-eye-slash"></i>';
+      toggleBtn.innerHTML = type === 'password' ? '<i class="fa-regular fa-eye text-xs"></i>' : '<i class="fa-regular fa-eye-slash text-xs"></i>';
     });
   }
 
@@ -78,7 +110,8 @@ function initEventListeners() {
       if (data.success && data.token) {
         currentAdminToken = data.token;
         sessionStorage.setItem('ninja_admin_token', currentAdminToken);
-        showToast('Login Successful! Welcome Admin.', 'success');
+        adminLoginModal.classList.add('hidden');
+        showToast('Login Successful! Welcome Master Admin.', 'success');
         showDashboard();
         loadDashboardData();
       } else {
@@ -93,11 +126,11 @@ function initEventListeners() {
   logoutBtn.addEventListener('click', () => {
     currentAdminToken = '';
     sessionStorage.removeItem('ninja_admin_token');
-    showLogin();
+    showLanding();
     showToast('Logged out of Admin Session', 'info');
   });
 
-  // Modal Controls
+  // Key Modal Controls
   newKeyModalBtn.addEventListener('click', () => keyModal.classList.remove('hidden'));
   closeModalBtn.addEventListener('click', () => keyModal.classList.add('hidden'));
 
@@ -233,10 +266,10 @@ async function checkTokenAndLoad() {
       showDashboard();
       loadDashboardData();
     } else {
-      showLogin();
+      showLanding();
     }
   } catch (err) {
-    showLogin();
+    showLanding();
   }
 }
 
@@ -284,7 +317,6 @@ function renderKeysTable() {
     const tr = document.createElement('tr');
     tr.className = 'hover:bg-white/[0.02] transition-colors border-b border-white/5';
 
-    // Status Badge
     let statusBadge = '';
     if (k.status === 'active') {
       statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-green-500/10 text-cyberGreen border border-green-500/20">PASS (ACTIVE)</span>';
@@ -294,7 +326,6 @@ function renderKeysTable() {
       statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-500/10 text-slate-400 border border-slate-500/20">REVOKED</span>';
     }
 
-    // Remaining Countdown
     let timeDisplay = '';
     if (!k.activatedAt) {
       timeDisplay = '<span class="text-slate-500">Unused (Starts on login)</span>';
@@ -335,7 +366,7 @@ function renderKeysTable() {
   });
 }
 
-// Key Action Handlers
+// Action Handlers
 async function resetHwid(id) {
   try {
     const res = await fetch('/api/keys', {
@@ -423,23 +454,25 @@ function copyToClipboard(text) {
   showToast(`Copied: ${text}`, 'success');
 }
 
-// Helpers
-function showLogin() {
-  loginSection.classList.remove('hidden');
+// UI State Toggles
+function showLanding() {
+  landingSection.classList.remove('hidden');
+  adminLoginModal.classList.add('hidden');
   dashboardSection.classList.add('hidden');
 }
 
 function showDashboard() {
-  loginSection.classList.add('hidden');
+  landingSection.classList.add('hidden');
+  adminLoginModal.classList.add('hidden');
   dashboardSection.classList.remove('hidden');
 }
 
 function showLoginError(msg) {
   loginAlertMsg.textContent = msg;
-  loginAlert.className = 'mb-6 p-4 rounded-xl text-xs font-semibold flex items-center gap-3 bg-red-500/10 border border-red-500/30 text-red-400';
+  loginAlert.className = 'mb-5 p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 bg-red-500/10 border border-red-500/30 text-red-400';
   loginAlert.classList.remove('hidden');
   loginCard.classList.remove('animate-shake');
-  void loginCard.offsetWidth; // trigger reflow
+  void loginCard.offsetWidth;
   loginCard.classList.add('animate-shake');
 }
 
