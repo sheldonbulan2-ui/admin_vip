@@ -6,7 +6,7 @@
     "durationDays": 30,
     "durationHours": 720,
     "status": "active",
-    "hwid": "UNKNOWN_HWID",
+    "hwid": null,
     "notes": "Demo 30 Days VIP",
     "createdAt": 1793539240855,
     "activatedAt": 1793539240860,

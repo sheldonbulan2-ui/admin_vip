@@ -8,6 +8,7 @@ const keysHandler = require('./api/keys');
 const validateHandler = require('./api/validate');
 const resellerHandler = require('./api/reseller');
 const announcementHandler = require('./api/announcement');
+const heartbeatHandler = require('./api/heartbeat');
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -54,6 +55,9 @@ const server = http.createServer((req, res) => {
     }
     if (pathname === '/api/announcement') {
       return announcementHandler(req, res);
+    }
+    if (pathname === '/api/heartbeat') {
+      return heartbeatHandler(req, res);
     }
 
     // Serve Static Files from /public

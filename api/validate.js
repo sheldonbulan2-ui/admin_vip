@@ -114,10 +114,10 @@ module.exports = async (req, res) => {
   }
 
   // 4. STRICT HARDWARE ID (HWID) LOCK
-  if (!acc.hwid && hwidParam && hwidParam !== 'UNKNOWN_HWID') {
+  if ((!acc.hwid || acc.hwid === 'UNKNOWN_HWID') && hwidParam && hwidParam !== 'UNKNOWN_HWID') {
     // Auto-bind device on first login
     acc.hwid = hwidParam;
-  } else if (acc.hwid && hwidParam && hwidParam !== 'UNKNOWN_HWID' && acc.hwid !== hwidParam) {
+  } else if (acc.hwid && acc.hwid !== 'UNKNOWN_HWID' && hwidParam && hwidParam !== 'UNKNOWN_HWID' && acc.hwid !== hwidParam) {
     // Reject multiple devices sharing account
     return sendResponse(false, 'failed', '🔒 Device Locked! Bawal mag-share ng account sa ibang device. Ipa-reset ang HWID sa Admin.', {
       locked: true,
