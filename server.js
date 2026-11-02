@@ -6,6 +6,8 @@ const url = require('url');
 const authHandler = require('./api/auth');
 const keysHandler = require('./api/keys');
 const validateHandler = require('./api/validate');
+const resellerHandler = require('./api/reseller');
+const announcementHandler = require('./api/announcement');
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -47,6 +49,12 @@ const server = http.createServer((req, res) => {
     if (pathname === '/api/validate') {
       return validateHandler(req, res);
     }
+    if (pathname === '/api/reseller') {
+      return resellerHandler(req, res);
+    }
+    if (pathname === '/api/announcement') {
+      return announcementHandler(req, res);
+    }
 
     // Serve Static Files from /public
     let filePath = path.join(PUBLIC_DIR, pathname === '/' ? 'index.html' : pathname);
@@ -62,7 +70,8 @@ const server = http.createServer((req, res) => {
         '.js': 'application/javascript',
         '.json': 'application/json',
         '.png': 'image/png',
-        '.svg': 'image/svg+xml'
+        '.svg': 'image/svg+xml',
+        '.apk': 'application/vnd.android.package-archive'
       };
 
       fs.readFile(filePath, (readErr, content) => {
